@@ -113,7 +113,13 @@ const Cal = (() => {
 
     const ev   = _selected;
     const body = ev.body?.content || ev.bodyPreview || '';
+
+    // DEBUG — open browser console (F12) to see this output
+    console.log('=== RTG SUBJECT ===", ev.subject);
+    console.log('=== RTG BODY TYPE ===", ev.body?.contentType);
+    console.log('=== RTG STRIPPED ===", Parsing.stripHtml(body).slice(0, 3000));
     const fields = Parsing.parseEventFields(ev.subject || '', body);
+    console.log('=== RTG PARSED FIELDS ===", JSON.stringify(fields, null, 2));
 
     const set = (id, v) => { if (v) { const el = document.getElementById(id); if (el) el.value = v; } };
     set('f-customer', fields.CustomerName);
