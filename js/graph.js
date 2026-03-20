@@ -17,44 +17,46 @@ const Graph = (() => {
     return r.json();
   }
 
-  // ── Calendar name filter ───────────────────────────────────────────────────
-  // Calendars whose names contain any of these strings are hidden.
-  // Add to this list if other junk calendars appear.
+  // ── Calendar filter ────────────────────────────────────────────────────────
+  // Skip calendars whose names contain any of these strings (case-insensitive).
+  // Add more entries here if other unwanted calendars keep appearing.
   const SKIP_NAMES = [
     'birthday', 'birthdays',
     'holiday', 'holidays',
-    'united states holidays',
+    'united states',
     'other people',
   ];
 
   function _shouldSkip(name) {
     const lower = (name || '').toLowerCase().trim();
-    return SKIP_NAMES.some(s => lower.includes(s));
+    // Skip by keyword
+    if (SKIP_NAMES.some(s => lower.includes(s))) return true;
+    // Skip calendars with [XXX/YYY] bracket notation — these are other people's
+    // calendars shared to you (e.g. "Longoria, Alfredo [EMR/MSOL/HSTN]")
+    if (/\[.+\/.+\]/.test(name || '')) return true;
+    return false;
   }
 
   // ── Calendars ─────────────────────────────────────────────────────────────
 
   /**
-   * Returns only the user's DEFAULT calendar, plus the shared calendar
-   * if enabled in settings.
-   *
-   * We deliberately skip secondary personal calendars (Birthdays, Holidays,
-   * etc.) — users should only see their main calendar and the shared one.
+   * Returns only the user's primary calendar, plus the shared service calendar
+   * if enabled in Settings. Everything else is filtered out.
    */
   async function getCalendars() {
     const data = await get('/me/calendars?$select=id,name,isDefaultCalendar,canEdit&$top=50');
     const all  = data.value || [];
 
-    // Keep ONLY the default calendar from the user's own mailbox
-    let cals = all
-      .filter(c => c.isDefaultCalendar === true && !_shouldSkip(c.name))
-      .map(c => ({ ...c, _shared: false }));
+    // Strategy 1: calendar explicitly flagged as default by Graph
+    let primary = all.find(c => c.isDefaultCalendar === true);
 
-    // Fallback: if somehow no default was flagged, take the first non-junk one
-    if (!cals.length) {
-      const first = all.find(c => !_shouldSkip(c.name));
-      if (first) cals = [{ ...first, _shared: false }];
-    }
+    // Strategy 2: calendar literally named "Calendar" (common when flag isn't set)
+    if (!primary) primary = all.find(c => c.name === 'Calendar');
+
+    // Strategy 3: first calendar that isn't junk
+    if (!primary) primary = all.find(c => !_shouldSkip(c.name));
+
+    let cals = primary ? [{ ...primary, _shared: false }] : [];
 
     // Shared calendar (only if enabled in Settings AND address is set)
     const sharedEnabled = Settings.get('sharedCal', false);
