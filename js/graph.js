@@ -17,31 +17,66 @@ const Graph = (() => {
     return r.json();
   }
 
+  // ── Calendar name filter ───────────────────────────────────────────────────
+  // Calendars whose names contain any of these strings are hidden.
+  // Add to this list if other junk calendars appear.
+  const SKIP_NAMES = [
+    'birthday', 'birthdays',
+    'holiday', 'holidays',
+    'united states holidays',
+    'other people',
+  ];
+
+  function _shouldSkip(name) {
+    const lower = (name || '').toLowerCase().trim();
+    return SKIP_NAMES.some(s => lower.includes(s));
+  }
+
   // ── Calendars ─────────────────────────────────────────────────────────────
 
   /**
-   * Returns all calendars for the signed-in user.
-   * If shared calendar is enabled in settings, also fetches the shared mailbox calendars.
+   * Returns only the user's DEFAULT calendar, plus the shared calendar
+   * if enabled in settings.
+   *
+   * We deliberately skip secondary personal calendars (Birthdays, Holidays,
+   * etc.) — users should only see their main calendar and the shared one.
    */
   async function getCalendars() {
     const data = await get('/me/calendars?$select=id,name,isDefaultCalendar,canEdit&$top=50');
-    let cals = (data.value || []).map(c => ({ ...c, _shared: false }));
+    const all  = data.value || [];
 
-    // Shared calendar (requires Calendars.Read.Shared permission)
+    // Keep ONLY the default calendar from the user's own mailbox
+    let cals = all
+      .filter(c => c.isDefaultCalendar === true && !_shouldSkip(c.name))
+      .map(c => ({ ...c, _shared: false }));
+
+    // Fallback: if somehow no default was flagged, take the first non-junk one
+    if (!cals.length) {
+      const first = all.find(c => !_shouldSkip(c.name));
+      if (first) cals = [{ ...first, _shared: false }];
+    }
+
+    // Shared calendar (only if enabled in Settings AND address is set)
     const sharedEnabled = Settings.get('sharedCal', false);
     const sharedEmail   = Settings.get('sharedEmail', '').trim();
 
     if (sharedEnabled && sharedEmail) {
       try {
         const sh = await get(
-          `/users/${encodeURIComponent(sharedEmail)}/calendars?$select=id,name&$top=20`
+          `/users/${encodeURIComponent(sharedEmail)}/calendars?$select=id,name,isDefaultCalendar&$top=20`
         );
-        (sh.value || []).forEach(c => {
-          cals.push({ ...c, _shared: true, _sharedEmail: sharedEmail });
-        });
+        const sharedDefault = (sh.value || []).find(c => c.isDefaultCalendar);
+        const sharedCal     = sharedDefault || (sh.value || [])[0];
+        if (sharedCal) {
+          cals.push({
+            ...sharedCal,
+            name:         sharedEmail,
+            _shared:      true,
+            _sharedEmail: sharedEmail,
+          });
+        }
       } catch (e) {
         console.warn('Shared calendar unavailable:', e.message);
-        // Non-fatal — user will see their own calendars only
       }
     }
 
@@ -58,14 +93,11 @@ const Graph = (() => {
    * @param {string} sharedEmail  - if set, fetches from a shared user's calendar
    */
   async function getEvents(calendarId, start, end, sharedEmail) {
-    // Extend end by 1 day to make the range inclusive
+    const s = start.toISOString();
     const endExtended = new Date(end);
     endExtended.setDate(endExtended.getDate() + 1);
-
-    const s = start.toISOString();
     const e = endExtended.toISOString();
 
-    // Fields we need — body content is needed for parsing
     const select  = 'subject,body,bodyPreview,start,end,location,organizer';
     const filter  = `start/dateTime ge '${s}' and end/dateTime le '${e}'`;
     const orderby = 'start/dateTime';

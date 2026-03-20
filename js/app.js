@@ -204,7 +204,9 @@ const App = {
     document.getElementById('cal-start').value = fmt(s);
     document.getElementById('cal-end').value   = fmt(e);
 
+    // Load calendars, then immediately fetch events for the default range
     await Cal.init();
+    await Cal.load();
   },
 
   // ── Tab navigation (within Work Order screen) ─────────────────────────────
