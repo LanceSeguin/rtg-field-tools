@@ -4,620 +4,65 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RTG Field Tools</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-/* ═══════════════════════════════════════════════════
-   DESIGN: Industrial precision — Emerson RTG brand
-   Dark slate + cyan accent + tight grid typography
-═══════════════════════════════════════════════════ */
-:root {
-  --deep:      #0b1520;
-  --slate:     #131f2e;
-  --panel:     #1a2d40;
-  --panel2:    #203448;
-  --border:    #1e3347;
-  --border2:   #254560;
-  --cyan:      #00b8d9;
-  --cyan-dim:  #006d82;
-  --cyan-glow: rgba(0,184,217,0.12);
-  --cyan-bg:   rgba(0,184,217,0.07);
-  --orange:    #f26522;
-  --text:      #ccdde8;
-  --text-dim:  #4d6b82;
-  --text-mid:  #7a9db5;
-  --white:     #ffffff;
-  --danger:    #e53e3e;
-  --success:   #38a169;
-  --field-bg:  #f7fafc;
-  --field-fg:  #0b1520;
-  --field-bdr: #cbd5e0;
-  --shadow:    0 4px 24px rgba(0,0,0,0.4);
-}
+<!-- Google Fonts — edit in app.css :root to change font choices -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{scroll-behavior:smooth;}
-
-body {
-  background: var(--deep);
-  color: var(--text);
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 14px;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-/* Grid texture */
-body::before {
-  content:'';position:fixed;inset:0;
-  background-image:
-    linear-gradient(rgba(0,184,217,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,184,217,0.03) 1px, transparent 1px);
-  background-size:40px 40px;
-  pointer-events:none;z-index:0;
-}
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar{width:5px;height:5px;}
-::-webkit-scrollbar-track{background:var(--deep);}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
-::-webkit-scrollbar-thumb:hover{background:var(--cyan-dim);}
-
-/* ══════════════════════════════════════════════════
-   SCREENS
-══════════════════════════════════════════════════ */
-.screen { display:none; position:relative; z-index:1; min-height:100vh; }
-.screen.active { display:flex; flex-direction:column; }
-
-/* ══════════════════════════════════════════════════
-   LOGIN SCREEN
-══════════════════════════════════════════════════ */
-#screen-login {
-  align-items:center; justify-content:center;
-  background: radial-gradient(ellipse at 30% 50%, rgba(0,184,217,0.06) 0%, transparent 60%),
-              radial-gradient(ellipse at 70% 20%, rgba(242,101,34,0.04) 0%, transparent 50%),
-              var(--deep);
-}
-
-.login-card {
-  width: 420px;
-  background: var(--slate);
-  border: 1px solid var(--border2);
-  border-top: 3px solid var(--cyan);
-  border-radius: 12px;
-  padding: 48px 40px;
-  box-shadow: var(--shadow), 0 0 60px rgba(0,184,217,0.05);
-  animation: fadeUp 0.5s ease;
-}
-
-.login-logo {
-  display:flex; align-items:center; gap:14px; margin-bottom:36px;
-}
-.login-logo-mark {
-  width:48px; height:48px;
-  background: linear-gradient(135deg, var(--cyan), var(--cyan-dim));
-  border-radius:10px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:1.5rem; flex-shrink:0;
-}
-.login-logo-text { line-height:1.2; }
-.login-logo-title {
-  font-family:'Rajdhani',sans-serif; font-size:1.4rem; font-weight:700;
-  color:var(--white); letter-spacing:0.03em;
-}
-.login-logo-sub {
-  font-size:0.75rem; color:var(--text-dim);
-  letter-spacing:0.1em; text-transform:uppercase;
-}
-
-.login-heading {
-  font-family:'Rajdhani',sans-serif; font-size:1.6rem; font-weight:700;
-  color:var(--white); margin-bottom:8px;
-}
-.login-sub {
-  font-size:0.88rem; color:var(--text-mid); margin-bottom:32px; line-height:1.6;
-}
-
-.btn-ms-login {
-  width:100%; padding:14px 20px;
-  background: var(--cyan); color: var(--deep);
-  border:none; border-radius:8px; cursor:pointer;
-  font-family:'Rajdhani',sans-serif; font-size:1rem; font-weight:700;
-  letter-spacing:0.06em; text-transform:uppercase;
-  display:flex; align-items:center; justify-content:center; gap:10px;
-  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
-  box-shadow: 0 4px 16px rgba(0,184,217,0.25);
-}
-.btn-ms-login:hover { background:#1dcfef; box-shadow:0 6px 24px rgba(0,184,217,0.35); }
-.btn-ms-login:active { transform:scale(0.98); }
-
-.login-note {
-  margin-top:20px; text-align:center;
-  font-size:0.75rem; color:var(--text-dim); line-height:1.6;
-}
-
-/* ══════════════════════════════════════════════════
-   HEADER
-══════════════════════════════════════════════════ */
-.app-header {
-  display:flex; align-items:stretch;
-  background:var(--slate); border-bottom:2px solid var(--cyan);
-  position:sticky; top:0; z-index:100;
-  box-shadow:0 2px 20px rgba(0,0,0,0.3);
-}
-.hdr-stripe { width:5px; background:var(--cyan); flex-shrink:0; }
-.hdr-inner {
-  display:flex; align-items:center; justify-content:space-between;
-  width:100%; padding:12px 24px;
-}
-.hdr-left { display:flex; align-items:center; gap:20px; }
-.hdr-title {
-  font-family:'Rajdhani',sans-serif; font-size:1.25rem; font-weight:700;
-  color:var(--white); letter-spacing:0.03em;
-}
-.hdr-title span { color:var(--cyan); }
-.hdr-user {
-  font-size:0.78rem; color:var(--text-dim);
-  background:var(--panel); border:1px solid var(--border2);
-  padding:4px 12px; border-radius:20px;
-  display:flex; align-items:center; gap:6px;
-}
-.hdr-user-dot {
-  width:6px;height:6px;border-radius:50%;
-  background:var(--success); flex-shrink:0;
-}
-.hdr-right { display:flex; align-items:center; gap:10px; }
-.hdr-btn {
-  background:var(--panel); border:1px solid var(--border2);
-  color:var(--text-mid); padding:6px 14px; border-radius:5px;
-  cursor:pointer; font-family:inherit; font-size:0.8rem;
-  transition:all 0.15s; display:flex; align-items:center; gap:6px;
-}
-.hdr-btn:hover { border-color:var(--cyan); color:var(--cyan); }
-.brand-badge {
-  font-family:'Rajdhani',sans-serif; font-size:0.65rem; font-weight:700;
-  letter-spacing:0.15em; color:var(--cyan); opacity:0.6;
-  text-align:right; line-height:1.4; padding-right:4px;
-}
-
-/* ══════════════════════════════════════════════════
-   HUB SCREEN
-══════════════════════════════════════════════════ */
-#screen-hub {
-  background: radial-gradient(ellipse at 20% 30%, rgba(0,184,217,0.05) 0%, transparent 50%), var(--deep);
-}
-
-.hub-main {
-  flex:1; max-width:1100px; margin:0 auto; padding:52px 32px 80px; width:100%;
-}
-
-.hub-hero { text-align:center; margin-bottom:56px; }
-.hub-hero h1 {
-  font-family:'Rajdhani',sans-serif;
-  font-size:clamp(2rem,5vw,3.2rem); font-weight:700;
-  color:var(--white); letter-spacing:0.02em; line-height:1.1; margin-bottom:14px;
-}
-.hub-hero h1 em { font-style:normal; color:var(--cyan); }
-.hub-hero p { font-size:1rem; color:var(--text-mid); max-width:480px; margin:0 auto; line-height:1.7; }
-
-.section-rule {
-  display:flex; align-items:center; gap:14px;
-  font-family:'IBM Plex Mono',monospace; font-size:0.68rem;
-  letter-spacing:0.2em; text-transform:uppercase; color:var(--text-dim);
-  margin-bottom:28px;
-}
-.section-rule::after { content:''; flex:1; height:1px; background:var(--border); }
-
-.tools-grid {
-  display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
-  gap:20px; margin-bottom:48px;
-}
-
-.tool-card {
-  background:var(--slate); border:1px solid var(--border);
-  border-radius:10px; overflow:hidden; cursor:pointer;
-  transition:transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  animation:fadeUp 0.4s ease both;
-  display:flex; flex-direction:column;
-}
-.tool-card:nth-child(1){animation-delay:0.05s;}
-.tool-card:nth-child(2){animation-delay:0.1s;}
-.tool-card:nth-child(3){animation-delay:0.15s;}
-.tool-card:hover {
-  transform:translateY(-5px);
-  box-shadow:0 16px 48px rgba(0,0,0,0.4), 0 0 0 1px var(--cyan-dim);
-  border-color:var(--cyan-dim);
-}
-.tool-card.disabled { opacity:0.45; cursor:default; pointer-events:none; }
-
-.card-bar { height:3px; background:var(--cyan); }
-.card-bar.orange { background:var(--orange); }
-.card-bar.teal   { background:#00c49a; }
-
-.card-body { padding:24px; flex:1; }
-.card-icon { font-size:2rem; margin-bottom:12px; display:block; }
-.card-title {
-  font-family:'Rajdhani',sans-serif; font-size:1.25rem; font-weight:700;
-  color:var(--white); margin-bottom:6px; letter-spacing:0.02em;
-}
-.card-desc { font-size:0.85rem; color:var(--text-mid); line-height:1.6; margin-bottom:16px; }
-.card-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
-.card-tag {
-  font-size:0.72rem; padding:2px 9px; border-radius:20px;
-  background:var(--panel); color:var(--text-dim);
-  border:1px solid var(--border2);
-  font-family:'IBM Plex Mono',monospace;
-}
-.card-cta {
-  font-family:'Rajdhani',sans-serif; font-size:0.85rem; font-weight:700;
-  letter-spacing:0.08em; text-transform:uppercase;
-  color:var(--cyan); display:flex; align-items:center; gap:6px;
-  transition:gap 0.15s;
-}
-.tool-card:hover .card-cta { gap:10px; }
-.card-badge {
-  display:inline-block; font-size:0.65rem; font-weight:700;
-  letter-spacing:0.1em; text-transform:uppercase;
-  padding:2px 8px; border-radius:3px; margin-bottom:10px;
-  background:rgba(0,184,217,0.1); color:var(--cyan);
-  border:1px solid var(--cyan-dim);
-  font-family:'IBM Plex Mono',monospace;
-}
-
-/* Settings modal */
-.modal-overlay {
-  display:none; position:fixed; inset:0; z-index:500;
-  background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);
-  align-items:center; justify-content:center;
-}
-.modal-overlay.open { display:flex; }
-.modal {
-  background:var(--slate); border:1px solid var(--border2);
-  border-top:3px solid var(--cyan); border-radius:10px;
-  width:460px; padding:32px; box-shadow:var(--shadow);
-  animation:fadeUp 0.2s ease;
-}
-.modal-title {
-  font-family:'Rajdhani',sans-serif; font-size:1.2rem; font-weight:700;
-  color:var(--white); margin-bottom:6px;
-}
-.modal-sub { font-size:0.83rem; color:var(--text-mid); margin-bottom:24px; line-height:1.6; }
-.setting-row {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:14px 0; border-bottom:1px solid var(--border);
-}
-.setting-row:last-of-type { border-bottom:none; }
-.setting-label { font-size:0.9rem; color:var(--text); font-weight:500; }
-.setting-desc  { font-size:0.78rem; color:var(--text-dim); margin-top:2px; }
-
-/* Toggle switch */
-.toggle { position:relative; width:44px; height:24px; flex-shrink:0; }
-.toggle input { opacity:0; width:0; height:0; }
-.toggle-slider {
-  position:absolute; inset:0; background:var(--border2);
-  border-radius:24px; cursor:pointer; transition:background 0.2s;
-}
-.toggle-slider::before {
-  content:''; position:absolute;
-  width:18px; height:18px; left:3px; top:3px;
-  background:var(--text-dim); border-radius:50%;
-  transition:transform 0.2s, background 0.2s;
-}
-.toggle input:checked + .toggle-slider { background:var(--cyan-dim); }
-.toggle input:checked + .toggle-slider::before {
-  transform:translateX(20px); background:var(--cyan);
-}
-.modal-close {
-  margin-top:20px; width:100%; padding:10px;
-  background:var(--panel); border:1px solid var(--border2);
-  color:var(--text); border-radius:6px; cursor:pointer;
-  font-family:'Rajdhani',sans-serif; font-size:0.9rem; font-weight:600;
-  letter-spacing:0.05em; transition:border-color 0.15s;
-}
-.modal-close:hover { border-color:var(--cyan); color:var(--cyan); }
-
-/* ══════════════════════════════════════════════════
-   WORK ORDER SCREEN
-══════════════════════════════════════════════════ */
-#screen-wo {
-  flex-direction:column;
-}
-
-.wo-layout {
-  display:grid;
-  grid-template-columns:320px 1fr;
-  flex:1; overflow:hidden; height:calc(100vh - 58px);
-}
-
-/* Left: Calendar panel */
-.cal-panel {
-  background:var(--slate); border-right:1px solid var(--border2);
-  display:flex; flex-direction:column; overflow:hidden;
-}
-
-.cal-section {
-  padding:14px 16px; border-bottom:1px solid var(--border);
-}
-.cal-section-title {
-  font-family:'IBM Plex Mono',monospace; font-size:0.65rem;
-  font-weight:500; letter-spacing:0.18em; text-transform:uppercase;
-  color:var(--text-dim); margin-bottom:10px;
-}
-
-.cal-select {
-  width:100%; background:var(--panel); border:1px solid var(--border2);
-  color:var(--text); padding:7px 10px; border-radius:5px;
-  font-family:inherit; font-size:0.83rem; margin-bottom:10px;
-  cursor:pointer;
-}
-.cal-select:focus { outline:none; border-color:var(--cyan); }
-
-.date-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
-.date-field { display:flex; flex-direction:column; gap:3px; }
-.date-label { font-size:0.72rem; color:var(--text-dim); font-weight:500; }
-.date-input {
-  background:var(--panel); border:1px solid var(--border2);
-  color:var(--text); padding:6px 8px; border-radius:4px;
-  font-family:inherit; font-size:0.82rem; width:100%;
-}
-.date-input:focus { outline:none; border-color:var(--cyan); }
-
-.preset-row { display:flex; gap:5px; flex-wrap:wrap; }
-.preset-btn {
-  font-size:0.72rem; padding:4px 9px; border-radius:4px;
-  border:1px solid var(--border2); background:transparent;
-  color:var(--text-dim); cursor:pointer; font-family:inherit;
-  transition:all 0.15s;
-}
-.preset-btn:hover { border-color:var(--cyan); color:var(--cyan); }
-.preset-btn.refresh { margin-left:auto; }
-
-.events-scroll { flex:1; overflow-y:auto; padding:8px; }
-
-.event-card {
-  padding:10px 12px; border-radius:6px;
-  border:1px solid var(--border); background:var(--panel);
-  margin-bottom:5px; cursor:pointer;
-  transition:border-color 0.15s, background 0.15s;
-}
-.event-card:hover { border-color:var(--border2); background:var(--panel2); }
-.event-card.selected { border-color:var(--cyan); background:var(--cyan-bg); }
-.event-subj { font-weight:600; font-size:0.86rem; color:var(--text); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.event-when { font-size:0.74rem; color:var(--text-dim); font-family:'IBM Plex Mono',monospace; }
-.event-loc  { font-size:0.74rem; color:var(--text-dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.events-empty { text-align:center; padding:40px 16px; color:var(--text-dim); font-size:0.84rem; line-height:1.7; }
-.events-loading { text-align:center; padding:20px; color:var(--text-dim); font-size:0.84rem; }
-
-.use-btn {
-  margin:8px; padding:10px; border-radius:6px;
-  background:var(--cyan); color:var(--deep);
-  border:none; cursor:pointer; width:calc(100% - 16px);
-  font-family:'Rajdhani',sans-serif; font-size:0.9rem; font-weight:700;
-  letter-spacing:0.06em; text-transform:uppercase;
-  transition:background 0.15s;
-}
-.use-btn:hover { background:#1dcfef; }
-
-/* Right: Form */
-.form-panel { overflow-y:auto; background:var(--deep); }
-
-/* Tab bar */
-.tab-bar {
-  display:flex; background:var(--slate);
-  border-bottom:1px solid var(--border2);
-  padding:0 20px; gap:2px;
-  position:sticky; top:0; z-index:50;
-}
-.tab-btn {
-  font-family:'Rajdhani',sans-serif; font-size:0.88rem; font-weight:600;
-  letter-spacing:0.05em; padding:12px 18px;
-  border:none; background:transparent; color:var(--text-dim);
-  cursor:pointer; border-bottom:2px solid transparent;
-  transition:color 0.15s, border-color 0.15s;
-  position:relative; top:1px;
-}
-.tab-btn:hover { color:var(--text); }
-.tab-btn.active { color:var(--cyan); border-bottom-color:var(--cyan); }
-
-.tab-pane { display:none; padding:24px 28px; }
-.tab-pane.active { display:block; }
-
-/* Form elements */
-.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 22px; margin-bottom:20px; }
-.span2 { grid-column:span 2; }
-
-.f-group { display:flex; flex-direction:column; gap:5px; }
-.f-label {
-  font-size:0.72rem; font-weight:600; letter-spacing:0.08em;
-  text-transform:uppercase; color:var(--text-dim);
-  font-family:'IBM Plex Mono',monospace;
-}
-.f-input, .f-textarea, .f-select {
-  background:var(--field-bg); color:var(--field-fg);
-  border:1.5px solid var(--field-bdr); border-radius:5px;
-  padding:8px 10px; font-family:'IBM Plex Sans',sans-serif; font-size:0.9rem;
-  transition:border-color 0.15s, box-shadow 0.15s;
-}
-.f-input:focus, .f-textarea:focus, .f-select:focus {
-  outline:none; border-color:var(--cyan);
-  box-shadow:0 0 0 3px rgba(0,184,217,0.1);
-}
-.f-textarea { resize:vertical; min-height:80px; }
-
-.sec-head {
-  font-family:'Rajdhani',sans-serif; font-size:0.95rem; font-weight:700;
-  letter-spacing:0.05em; color:var(--cyan);
-  margin-bottom:14px; padding-bottom:8px;
-  border-bottom:1px solid var(--border2);
-}
-
-/* Rich text toolbar */
-.rte-wrap { border:1.5px solid var(--border2); border-radius:6px; overflow:hidden; }
-.rte-toolbar {
-  display:flex; flex-wrap:wrap; gap:2px; padding:6px 8px;
-  background:var(--panel); border-bottom:1px solid var(--border2);
-}
-.rte-btn {
-  background:transparent; border:1px solid transparent;
-  color:var(--text-mid); padding:4px 7px; border-radius:3px;
-  cursor:pointer; font-size:0.82rem; font-family:inherit;
-  transition:all 0.12s; line-height:1;
-}
-.rte-btn:hover { background:var(--panel2); color:var(--text); border-color:var(--border2); }
-.rte-btn.active { background:var(--cyan-bg); color:var(--cyan); border-color:var(--cyan-dim); }
-.rte-sep { width:1px; background:var(--border2); margin:2px 4px; align-self:stretch; }
-.rte-select {
-  background:var(--panel2); border:1px solid var(--border2);
-  color:var(--text-mid); padding:3px 5px; border-radius:3px;
-  font-size:0.8rem; cursor:pointer; font-family:inherit;
-}
-.rte-editor {
-  background:var(--field-bg); color:var(--field-fg);
-  min-height:160px; padding:12px 14px;
-  outline:none; font-family:'IBM Plex Sans',sans-serif;
-  font-size:0.92rem; line-height:1.6;
-}
-.rte-editor:focus { box-shadow:none; }
-.rte-editor img {
-  max-width:100%; cursor:move; border:2px solid transparent;
-  border-radius:3px; transition:border-color 0.15s;
-}
-.rte-editor img.selected { border-color:var(--cyan); }
-.rte-hint { font-size:0.73rem; color:var(--text-dim); margin-top:5px; text-align:right; }
-
-/* Labor table */
-.labor-tbl {
-  width:100%; border-collapse:collapse; margin-bottom:12px;
-  font-size:0.83rem;
-}
-.labor-tbl th {
-  background:var(--panel); color:var(--text-dim);
-  font-size:0.68rem; font-weight:600; letter-spacing:0.1em;
-  text-transform:uppercase; padding:8px 8px; text-align:left;
-  border-bottom:1px solid var(--border2);
-  font-family:'IBM Plex Mono',monospace; white-space:nowrap;
-}
-.labor-tbl td {
-  padding:4px 5px; border-bottom:1px solid var(--border);
-  background:var(--slate);
-}
-.labor-tbl tr:hover td { background:var(--panel); }
-.tbl-input {
-  width:100%; background:var(--field-bg); color:var(--field-fg);
-  border:1px solid var(--field-bdr); border-radius:3px;
-  padding:4px 6px; font-family:inherit; font-size:0.82rem;
-}
-.tbl-input:focus { outline:none; border-color:var(--cyan); }
-.td-static { font-size:0.83rem; color:var(--text); padding:0 6px; white-space:nowrap; }
-.td-dow    { font-size:0.75rem; color:var(--text-dim); font-family:'IBM Plex Mono',monospace; font-weight:600; }
-
-.btn-rm {
-  background:transparent; border:none; cursor:pointer;
-  color:var(--text-dim); font-size:0.9rem; padding:3px 6px;
-  border-radius:3px; transition:all 0.12s;
-}
-.btn-rm:hover { color:var(--danger); background:rgba(229,62,62,0.1); }
-
-.btn-ghost {
-  font-size:0.8rem; padding:7px 14px; border-radius:5px;
-  border:1px dashed var(--border2); background:transparent;
-  color:var(--text-dim); cursor:pointer; font-family:inherit;
-  transition:all 0.15s;
-}
-.btn-ghost:hover { border-color:var(--cyan); color:var(--cyan); }
-
-/* Parts */
-.parts-add-row {
-  display:grid; grid-template-columns:1fr 2fr 1fr 70px auto;
-  gap:8px; align-items:end; margin-bottom:14px;
-}
-
-/* Output tab */
-.output-card {
-  background:var(--slate); border:1px solid var(--border2);
-  border-left:3px solid var(--cyan); border-radius:7px;
-  padding:22px 24px; margin-bottom:20px;
-}
-.gen-row { display:flex; gap:12px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
-.gen-lbl { font-size:0.78rem; color:var(--text-dim); font-weight:500; white-space:nowrap; }
-
-.btn-generate {
-  display:flex; align-items:center; gap:10px;
-  padding:13px 32px; border-radius:6px;
-  background:var(--cyan); color:var(--deep);
-  border:none; cursor:pointer;
-  font-family:'Rajdhani',sans-serif; font-size:1rem; font-weight:700;
-  letter-spacing:0.08em; text-transform:uppercase;
-  transition:background 0.15s, transform 0.1s;
-  box-shadow:0 4px 16px rgba(0,184,217,0.2);
-}
-.btn-generate:hover { background:#1dcfef; }
-.btn-generate:active { transform:scale(0.98); }
-.btn-generate:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
-
-.summary-grid { display:grid; grid-template-columns:140px 1fr; gap:6px 12px; font-size:0.85rem; }
-.sum-key { color:var(--text-dim); font-family:'IBM Plex Mono',monospace; font-size:0.78rem; }
-.sum-val { color:var(--text); }
-
-/* Toast */
-.toast {
-  position:fixed; bottom:24px; right:24px; z-index:9999;
-  padding:12px 20px; border-radius:6px;
-  font-size:0.88rem; font-weight:500;
-  background:var(--success); color:#fff;
-  box-shadow:0 4px 20px rgba(0,0,0,0.4);
-  animation:slideIn 0.25s ease;
-  display:none; max-width:340px;
-}
-.toast.err { background:var(--danger); }
-.toast.warn { background:#d97706; }
-
-/* Spinner */
-.spin {
-  display:inline-block; width:15px; height:15px;
-  border:2px solid var(--deep); border-top-color:transparent;
-  border-radius:50%; animation:spin 0.7s linear infinite;
-}
-
-@keyframes fadeUp { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
-@keyframes slideIn { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
-@keyframes spin { to{transform:rotate(360deg);} }
-</style>
+<!-- All styles in one file — edit css/app.css -->
+<link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════
+<!-- ═══════════════════════════════════════════════════════════════════════════
      LOGIN SCREEN
-══════════════════════════════════════════════ -->
+════════════════════════════════════════════════════════════════════════════ -->
 <div id="screen-login" class="screen active">
   <div class="login-card">
     <div class="login-logo">
       <div class="login-logo-mark">⚙</div>
-      <div class="login-logo-text">
+      <div>
         <div class="login-logo-title">RTG Field Tools</div>
         <div class="login-logo-sub">Rosemount Tank Gauging</div>
       </div>
     </div>
     <div class="login-heading">Sign in to continue</div>
-    <div class="login-sub">Use your Emerson Microsoft account to access your Outlook calendar and generate work orders.</div>
+    <div class="login-sub">
+      Use your Emerson Microsoft account to access your Outlook calendar
+      and generate work orders.
+    </div>
     <button class="btn-ms-login" onclick="App.login()">
-      <svg width="20" height="20" viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+      <!-- Microsoft logo SVG -->
+      <svg width="20" height="20" viewBox="0 0 21 21" fill="none">
+        <rect x="1"  y="1"  width="9" height="9" fill="#f25022"/>
+        <rect x="11" y="1"  width="9" height="9" fill="#7fba00"/>
+        <rect x="1"  y="11" width="9" height="9" fill="#00a4ef"/>
+        <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+      </svg>
       Sign in with Microsoft
     </button>
-    <div class="login-note">Your credentials are handled entirely by Microsoft.<br>This app never sees your password.</div>
+    <div class="login-note">
+      Your credentials are handled entirely by Microsoft.<br>
+      This app never sees your password.
+    </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
      HUB SCREEN
-══════════════════════════════════════════════ -->
+     To add a new tool: copy a .tool-card block below and add a route in app.js
+════════════════════════════════════════════════════════════════════════════ -->
 <div id="screen-hub" class="screen">
   <header class="app-header">
     <div class="hdr-stripe"></div>
     <div class="hdr-inner">
       <div class="hdr-left">
         <div class="hdr-title">RTG <span>Field Tools</span></div>
-        <div class="hdr-user"><div class="hdr-user-dot"></div><span id="hdr-username">Loading…</span></div>
+        <div class="hdr-user">
+          <div class="hdr-user-dot"></div>
+          <span id="hdr-username">Loading…</span>
+        </div>
       </div>
       <div class="hdr-right">
         <button class="hdr-btn" onclick="App.openSettings()">⚙ Settings</button>
@@ -636,13 +81,18 @@ body::before {
     <div class="section-rule">Available Tools</div>
 
     <div class="tools-grid">
+
+      <!-- Work Order Generator -->
       <div class="tool-card" onclick="App.showWO()">
         <div class="card-bar"></div>
         <div class="card-body">
           <div class="card-badge">Active</div>
           <span class="card-icon">📋</span>
           <div class="card-title">Work Order Generator</div>
-          <div class="card-desc">Select a calendar event and auto-fill a complete service work order. Rich text summaries with image support, auto labor rows, exports to .docx.</div>
+          <div class="card-desc">
+            Select a calendar event and auto-fill a complete service work order.
+            Rich text summaries with image support, auto labor rows, exports to .docx.
+          </div>
           <div class="card-tags">
             <span class="card-tag">Outlook Calendar</span>
             <span class="card-tag">Rich Text</span>
@@ -652,12 +102,16 @@ body::before {
         </div>
       </div>
 
+      <!-- RTG Calendar Invite (coming soon) -->
       <div class="tool-card disabled">
         <div class="card-bar orange"></div>
         <div class="card-body">
           <span class="card-icon">📅</span>
           <div class="card-title">RTG Calendar Invite</div>
-          <div class="card-desc">Import a customer intake PDF and generate a properly formatted Outlook calendar invite matching RTG standards.</div>
+          <div class="card-desc">
+            Import a customer intake PDF and generate a properly formatted
+            Outlook calendar invite matching RTG standards.
+          </div>
           <div class="card-tags">
             <span class="card-tag">PDF Import</span>
             <span class="card-tag">Outlook Invite</span>
@@ -666,12 +120,16 @@ body::before {
         </div>
       </div>
 
+      <!-- Expense Report (coming soon) -->
       <div class="tool-card disabled">
         <div class="card-bar teal"></div>
         <div class="card-body">
           <span class="card-icon">💰</span>
           <div class="card-title">Expense Report</div>
-          <div class="card-desc">Generate expense reports from field data and receipts. Auto-categorize and export to company standard format.</div>
+          <div class="card-desc">
+            Generate expense reports from field data and receipts.
+            Auto-categorize and export to company standard format.
+          </div>
           <div class="card-tags">
             <span class="card-tag">Receipts</span>
             <span class="card-tag">Auto-categorize</span>
@@ -679,13 +137,17 @@ body::before {
           <div class="card-cta" style="color:var(--text-dim)">Coming Soon →</div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
 
-<!-- ══════════════════════════════════════════════
+      <!-- Add more tool cards here -->
+
+    </div><!-- tools-grid -->
+  </div><!-- hub-main -->
+</div><!-- screen-hub -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
      SETTINGS MODAL
-══════════════════════════════════════════════ -->
+════════════════════════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="settings-modal">
   <div class="modal">
     <div class="modal-title">⚙ Settings</div>
@@ -694,45 +156,50 @@ body::before {
     <div class="setting-row">
       <div>
         <div class="setting-label">Shared Calendar</div>
-        <div class="setting-desc">Show shared service mailbox calendar alongside personal calendar. Requires Calendars.Read.Shared permission.</div>
+        <div class="setting-desc">
+          Show a shared service mailbox calendar alongside your personal calendar.
+          Requires <code>Calendars.Read.Shared</code> permission from IT.
+        </div>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="tog-shared" onchange="App.saveSetting('sharedCal',this.checked)">
+        <input type="checkbox" id="tog-shared"
+               onchange="App.saveSetting('sharedCal', this.checked)">
         <span class="toggle-slider"></span>
       </label>
     </div>
 
     <div class="setting-row">
       <div>
-        <div class="setting-label">Default Technician</div>
-        <div class="setting-desc">Pre-fill the Service Technician field.</div>
+        <div class="setting-label">Default Technician Name</div>
+        <div class="setting-desc">Pre-fills the Service Technician field on every new work order.</div>
       </div>
     </div>
     <div style="margin-bottom:16px;">
       <input type="text" class="f-input" id="set-tech" style="width:100%"
              placeholder="e.g. Seguin"
-             oninput="App.saveSetting('defaultTech',this.value)">
+             oninput="App.saveSetting('defaultTech', this.value)">
     </div>
 
     <div class="setting-row">
       <div>
         <div class="setting-label">Shared Mailbox Address</div>
-        <div class="setting-desc">Email address of the shared service calendar (e.g. service@emerson.com).</div>
+        <div class="setting-desc">Email address of the shared service calendar (used when Shared Calendar is on).</div>
       </div>
     </div>
     <div style="margin-bottom:8px;">
       <input type="email" class="f-input" id="set-shared-email" style="width:100%"
-             placeholder="shared-calendar@emerson.com"
-             oninput="App.saveSetting('sharedEmail',this.value)">
+             placeholder="service-team@emerson.com"
+             oninput="App.saveSetting('sharedEmail', this.value)">
     </div>
 
     <button class="modal-close" onclick="App.closeSettings()">Close</button>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
      WORK ORDER SCREEN
-══════════════════════════════════════════════ -->
+════════════════════════════════════════════════════════════════════════════ -->
 <div id="screen-wo" class="screen">
   <header class="app-header">
     <div class="hdr-stripe"></div>
@@ -750,7 +217,7 @@ body::before {
 
   <div class="wo-layout">
 
-    <!-- Calendar panel -->
+    <!-- ── Calendar panel (left) ── -->
     <div class="cal-panel">
       <div class="cal-section">
         <div class="cal-section-title">📅 Outlook Calendar</div>
@@ -780,87 +247,160 @@ body::before {
       <button class="use-btn" onclick="Cal.useSelected()">⚡ Use Selected Event</button>
     </div>
 
-    <!-- Form panel -->
+    <!-- ── Form panel (right) ── -->
     <div class="form-panel">
+
+      <!-- Tab bar — add data-tab attribute to match App.tab() calls -->
       <div class="tab-bar">
-        <button class="tab-btn active" onclick="WO.tab('request',this)">Service Request</button>
-        <button class="tab-btn" onclick="WO.tab('report',this)">Service Report</button>
-        <button class="tab-btn" onclick="WO.tab('labor',this)">Labor &amp; Parts</button>
-        <button class="tab-btn" onclick="WO.tab('output',this)">Output</button>
+        <button class="tab-btn active" data-tab="request" onclick="App.tab('request')">Service Request</button>
+        <button class="tab-btn"        data-tab="report"  onclick="App.tab('report')">Service Report</button>
+        <button class="tab-btn"        data-tab="labor"   onclick="App.tab('labor')">Labor &amp; Parts</button>
+        <button class="tab-btn"        data-tab="output"  onclick="App.tab('output')">Output</button>
       </div>
 
-      <!-- TAB: Service Request -->
+      <!-- ── TAB: Service Request ── -->
       <div id="tab-request" class="tab-pane active">
         <div class="sec-head">🏢 Customer &amp; Site</div>
         <div class="form-grid">
-          <div class="f-group"><label class="f-label">Customer Name</label><input id="f-customer" class="f-input" spellcheck="true" autocomplete="organization"></div>
-          <div class="f-group"><label class="f-label">Purchase Order #</label><input id="f-po" class="f-input"></div>
-          <div class="f-group"><label class="f-label">Service Agency</label><input id="f-agency" class="f-input"></div>
-          <div class="f-group"><label class="f-label">Service Technician</label><input id="f-tech" class="f-input"></div>
-          <div class="f-group"><label class="f-label">Service Agency Order</label><input id="f-order" class="f-input" placeholder="e.g. SLORD460145"></div>
-          <div class="f-group"><label class="f-label">Product Line</label><input id="f-product" class="f-input"></div>
-          <div class="f-group"><label class="f-label">System / Serial #</label><input id="f-serial" class="f-input"></div>
-          <div class="f-group"><label class="f-label">Contact Name</label><input id="f-cname" class="f-input" spellcheck="true"></div>
-          <div class="f-group"><label class="f-label">Contact Phone</label><input id="f-cphone" class="f-input" type="tel"></div>
-          <div class="f-group"><label class="f-label">Contact Email</label><input id="f-cemail" class="f-input" type="email"></div>
-          <div class="f-group span2"><label class="f-label">Service Address</label><textarea id="f-address" class="f-textarea" rows="3" spellcheck="true"></textarea></div>
-          <div class="f-group span2"><label class="f-label">Scope of Work</label><textarea id="f-scope" class="f-textarea" rows="4" spellcheck="true"></textarea></div>
+          <div class="f-group">
+            <label class="f-label">Customer Name</label>
+            <input id="f-customer" class="f-input" spellcheck="true" autocomplete="organization">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Purchase Order #</label>
+            <input id="f-po" class="f-input">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Service Agency</label>
+            <input id="f-agency" class="f-input">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Service Technician</label>
+            <input id="f-tech" class="f-input">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Service Agency Order</label>
+            <input id="f-order" class="f-input" placeholder="e.g. SLORD460145">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Product Line</label>
+            <input id="f-product" class="f-input">
+          </div>
+          <div class="f-group">
+            <label class="f-label">System / Serial #</label>
+            <input id="f-serial" class="f-input">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Contact Name</label>
+            <input id="f-cname" class="f-input" spellcheck="true">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Contact Phone</label>
+            <input id="f-cphone" class="f-input" type="tel">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Contact Email</label>
+            <input id="f-cemail" class="f-input" type="email">
+          </div>
+          <div class="f-group span2">
+            <label class="f-label">Service Address</label>
+            <textarea id="f-address" class="f-textarea" rows="3" spellcheck="true"></textarea>
+          </div>
+          <div class="f-group span2">
+            <label class="f-label">Scope of Work</label>
+            <textarea id="f-scope" class="f-textarea" rows="4" spellcheck="true"></textarea>
+          </div>
         </div>
       </div>
 
-      <!-- TAB: Service Report -->
+      <!-- ── TAB: Service Report ── -->
       <div id="tab-report" class="tab-pane">
         <div class="sec-head">📝 Summary</div>
-        <div class="rte-wrap" id="rte-summary-wrap">
+        <div class="rte-wrap">
           <div class="rte-toolbar" id="rte-summary-tb"></div>
-          <div class="rte-editor" id="rte-summary" contenteditable="true" spellcheck="true" data-placeholder="Enter work summary…"></div>
+          <div class="rte-editor" id="rte-summary"
+               contenteditable="true" spellcheck="true"
+               data-placeholder="Enter work summary…"></div>
         </div>
-        <div class="rte-hint">Paste images directly (Ctrl+V) or use the image button in the toolbar</div>
+        <div class="rte-hint">Paste images directly (Ctrl+V) or use 🖼 in the toolbar</div>
 
-        <div class="sec-head" style="margin-top:24px;">🔄 Required Follow Up <small style="font-size:0.8rem;font-weight:400;color:var(--text-dim)">(If Applicable)</small></div>
-        <div class="rte-wrap" id="rte-followup-wrap">
-          <div class="rte-toolbar" id="rte-followup-tb"></div>
-          <div class="rte-editor" id="rte-followup" contenteditable="true" spellcheck="true" data-placeholder="Enter follow-up notes…"></div>
+        <div class="sec-head" style="margin-top:24px;">
+          🔄 Required Follow Up
+          <small style="font-size:0.8rem;font-weight:400;color:var(--text-dim)">(If Applicable)</small>
         </div>
-        <div class="rte-hint">Paste images directly (Ctrl+V) or use the image button in the toolbar</div>
+        <div class="rte-wrap">
+          <div class="rte-toolbar" id="rte-followup-tb"></div>
+          <div class="rte-editor" id="rte-followup"
+               contenteditable="true" spellcheck="true"
+               data-placeholder="Enter follow-up notes…"></div>
+        </div>
+        <div class="rte-hint">Paste images directly (Ctrl+V) or use 🖼 in the toolbar</div>
       </div>
 
-      <!-- TAB: Labor & Parts -->
+      <!-- ── TAB: Labor & Parts ── -->
       <div id="tab-labor" class="tab-pane">
         <div class="sec-head">⏱ Labor Entry</div>
         <div style="overflow-x:auto;">
           <table class="labor-tbl">
             <thead>
               <tr>
-                <th>Date</th><th>Day</th>
-                <th>Std Reg</th><th>Std OT</th><th>Std Hol</th>
-                <th>Nxt Reg</th><th>Nxt OT</th><th>Nxt Hol</th>
-                <th>2nd Reg</th><th>2nd OT</th><th>2nd Hol</th>
-                <th>Notes</th><th></th>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Std Reg</th>
+                <th>Std OT</th>
+                <th>Std Hol</th>
+                <th>Nxt Reg</th>
+                <th>Nxt OT</th>
+                <th>Nxt Hol</th>
+                <th>2nd Reg</th>
+                <th>2nd OT</th>
+                <th>2nd Hol</th>
+                <th>Notes</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="labor-body"></tbody>
           </table>
         </div>
-        <button class="btn-ghost" onclick="Labor.addManual()" style="margin-bottom:28px;">+ Add Day</button>
+        <button class="btn-ghost" onclick="Labor.addManual()" style="margin-bottom:28px;">
+          + Add Day Manually
+        </button>
 
         <div class="sec-head">🔩 Parts</div>
         <div class="parts-add-row">
-          <div class="f-group"><label class="f-label">Part #</label><input id="pt-num" class="f-input"></div>
-          <div class="f-group"><label class="f-label">Description</label><input id="pt-desc" class="f-input"></div>
-          <div class="f-group"><label class="f-label">Serial(s)</label><input id="pt-ser" class="f-input"></div>
-          <div class="f-group"><label class="f-label">Qty</label><input id="pt-qty" class="f-input" type="number" value="1" min="0"></div>
-          <div class="f-group"><label class="f-label">&nbsp;</label>
-            <button class="btn-generate" style="padding:8px 14px;font-size:0.82rem;" onclick="Parts.add()">Add</button>
+          <div class="f-group">
+            <label class="f-label">Part #</label>
+            <input id="pt-num" class="f-input">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Description</label>
+            <input id="pt-desc" class="f-input">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Serial(s)</label>
+            <input id="pt-ser" class="f-input">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Qty</label>
+            <input id="pt-qty" class="f-input" type="number" value="1" min="0">
+          </div>
+          <div class="f-group">
+            <label class="f-label">&nbsp;</label>
+            <button class="btn-generate" style="padding:8px 14px;font-size:0.82rem;"
+                    onclick="Parts.add()">Add</button>
           </div>
         </div>
         <table class="labor-tbl">
-          <thead><tr><th>Part #</th><th>Description</th><th>Serial(s)</th><th>Qty</th><th></th></tr></thead>
+          <thead>
+            <tr>
+              <th>Part #</th><th>Description</th><th>Serial(s)</th><th>Qty</th><th></th>
+            </tr>
+          </thead>
           <tbody id="parts-body"></tbody>
         </table>
       </div>
 
-      <!-- TAB: Output -->
+      <!-- ── TAB: Output ── -->
       <div id="tab-output" class="tab-pane">
         <div class="output-card">
           <div class="sec-head">📄 Generate Work Order</div>
@@ -868,9 +408,11 @@ body::before {
             <span class="gen-lbl">File name:</span>
             <input type="text" id="f-pattern" class="f-input" style="flex:1;"
                    value="{ServiceAgencyOrder}_Work Order.docx">
-            <small style="color:var(--text-dim);font-size:0.73rem;white-space:nowrap;">{ServiceAgencyOrder} {Customer} {Date}</small>
+            <small style="color:var(--text-dim);font-size:0.73rem;white-space:nowrap;">
+              {ServiceAgencyOrder} {Customer} {Date}
+            </small>
           </div>
-          <button class="btn-generate" id="gen-btn" onclick="WO.generate()">
+          <button class="btn-generate" id="gen-btn" onclick="App.generate()">
             <span id="gen-spin" style="display:none" class="spin"></span>
             <span id="gen-lbl">⚙ Generate &amp; Download</span>
           </button>
@@ -882,1097 +424,26 @@ body::before {
 
     </div><!-- form-panel -->
   </div><!-- wo-layout -->
-</div>
+</div><!-- screen-wo -->
 
+
+<!-- Toast notification -->
 <div id="toast" class="toast"></div>
 
-<!-- ══════════════════════════════════════════════
-     DOCX GENERATION LIBRARY (pure JS, no deps)
-══════════════════════════════════════════════ -->
-<script>
-// ─────────────────────────────────────────────────────────────
-// DOCX builder — generates a real .docx from scratch in the
-// browser. No libraries. Uses the Open XML spec directly.
-// ─────────────────────────────────────────────────────────────
-const DOCX = (() => {
-  // Minimal ZIP implementation (DEFLATE store-only for simplicity)
-  function u8(str) {
-    return new TextEncoder().encode(str);
-  }
 
-  function crc32(data) {
-    let c = 0xFFFFFFFF;
-    const table = [];
-    for (let i = 0; i < 256; i++) {
-      let n = i;
-      for (let j = 0; j < 8; j++) n = (n & 1) ? (0xEDB88320 ^ (n >>> 1)) : (n >>> 1);
-      table[i] = n;
-    }
-    for (let i = 0; i < data.length; i++) c = table[(c ^ data[i]) & 0xFF] ^ (c >>> 8);
-    return (c ^ 0xFFFFFFFF) >>> 0;
-  }
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SCRIPTS — loaded in dependency order
+     To add a new module: add it here and wire it into app.js
+════════════════════════════════════════════════════════════════════════════ -->
+<script src="js/config.js"></script>   <!-- CONFIG object — edit for your app -->
+<script src="js/auth.js"></script>     <!-- Microsoft OAuth PKCE -->
+<script src="js/graph.js"></script>    <!-- Microsoft Graph API calls -->
+<script src="js/parsing.js"></script>  <!-- Event body → form field parser -->
+<script src="js/labor.js"></script>    <!-- Labor row state + rendering -->
+<script src="js/parts.js"></script>    <!-- Parts row state + rendering -->
+<script src="js/rte.js"></script>      <!-- Rich text editor -->
+<script src="js/docx.js"></script>     <!-- .docx file builder -->
+<script src="js/app.js"></script>      <!-- Main controller — edit for new screens/tools -->
 
-  function u16le(n) { return [n & 0xFF, (n >> 8) & 0xFF]; }
-  function u32le(n) { return [n & 0xFF, (n >> 8) & 0xFF, (n >> 16) & 0xFF, (n >> 24) & 0xFF]; }
-
-  function zipFile(name, data) {
-    const nameBytes = u8(name);
-    const crc = crc32(data);
-    const local = [
-      0x50,0x4B,0x03,0x04,     // local file header sig
-      20,0,                     // version needed
-      0,0,                      // flags
-      0,0,                      // compression (stored)
-      0,0, 0,0,                 // mod time/date
-      ...u32le(crc),
-      ...u32le(data.length),
-      ...u32le(data.length),
-      ...u16le(nameBytes.length),
-      0,0,                      // extra length
-      ...nameBytes,
-      ...data
-    ];
-    const central = [
-      0x50,0x4B,0x01,0x02,
-      20,0, 20,0,
-      0,0, 0,0,
-      0,0, 0,0,
-      ...u32le(crc),
-      ...u32le(data.length),
-      ...u32le(data.length),
-      ...u16le(nameBytes.length),
-      0,0, 0,0, 0,0,
-      0,0, 0,0,
-      ...u32le(0),
-      ...nameBytes
-    ];
-    return { local, central, nameBytes };
-  }
-
-  function buildZip(files) {
-    const locals = [], centrals = [];
-    let offset = 0;
-    files.forEach(({name, data}) => {
-      const f = zipFile(name, typeof data === 'string' ? u8(data) : data);
-      // patch offset into central
-      f.central.splice(42, 4, ...u32le(offset));
-      locals.push(f.local);
-      centrals.push(f.central);
-      offset += f.local.length;
-    });
-    const centralStart = offset;
-    const centralSize  = centrals.reduce((a,c) => a + c.length, 0);
-    const eocd = [
-      0x50,0x4B,0x05,0x06,
-      0,0, 0,0,
-      ...u16le(files.length),
-      ...u16le(files.length),
-      ...u32le(centralSize),
-      ...u32le(centralStart),
-      0,0
-    ];
-    return new Uint8Array([].concat(...locals, ...centrals, eocd));
-  }
-
-  // ── XML helpers ──
-  function esc(s) {
-    return String(s||'')
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;');
-  }
-
-  function wText(text, bold, italic, underline, fontSize, color) {
-    if (!text) return '';
-    const lines = String(text).split('\n');
-    return lines.map((line, i) => {
-      let rpr = '';
-      if (bold)       rpr += '<w:b/>';
-      if (italic)     rpr += '<w:i/>';
-      if (underline)  rpr += '<w:u w:val="single"/>';
-      if (fontSize)   rpr += `<w:sz w:val="${fontSize*2}"/><w:szCs w:val="${fontSize*2}"/>`;
-      if (color)      rpr += `<w:color w:val="${color.replace('#','')}"/>`;
-      const rprXml = rpr ? `<w:rPr>${rpr}</w:rPr>` : '';
-      const run = line ? `<w:r>${rprXml}<w:t xml:space="preserve">${esc(line)}</w:t></w:r>` : '';
-      const br  = (i < lines.length-1) ? `<w:r><w:br/></w:r>` : '';
-      return run + br;
-    }).join('');
-  }
-
-  function wPara(runs, style, align) {
-    let ppr = '';
-    if (style)  ppr += `<w:pStyle w:val="${style}"/>`;
-    if (align)  ppr += `<w:jc w:val="${align}"/>`;
-    ppr = ppr ? `<w:pPr>${ppr}</w:pPr>` : '';
-    return `<w:p>${ppr}${runs}</w:p>`;
-  }
-
-  function wCell(content, bold, shade, colspan, width) {
-    const shadeXml = shade ? `<w:shd w:val="clear" w:color="auto" w:fill="${shade}"/>` : '';
-    const mergeXml = colspan > 1 ? `<w:gridSpan w:val="${colspan}"/>` : '';
-    const wXml = width ? `<w:tcW w:w="${width}" w:type="dxa"/>` : '';
-    return `<w:tc><w:tcPr>${wXml}${mergeXml}${shadeXml}<w:tcMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tcMar></w:tcPr>${wPara(wText(content,bold))}</w:tc>`;
-  }
-
-  function wRow(cells) {
-    return `<w:tr>${cells}</w:tr>`;
-  }
-
-  function labelRow(label, value, labelW=2000, valueW=7360) {
-    return wRow(wCell(label,true,'E8F0F7',1,labelW) + wCell(value,false,'',1,valueW));
-  }
-
-  // ── Image handling ──
-  async function imgToWxml(dataUrl, rId, widthIn) {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => {
-        const ar = img.height / img.width;
-        const wEmu = Math.round(widthIn * 914400);
-        const hEmu = Math.round(widthIn * ar * 914400);
-        const xml = `<w:p><w:r><w:rPr/><w:drawing>
-          <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">
-            <wp:extent cx="${wEmu}" cy="${hEmu}"/>
-            <wp:docPr id="1" name="img"/>
-            <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
-                <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
-                  <pic:blipFill>
-                    <a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
-                    <a:stretch><a:fillRect/></a:stretch>
-                  </pic:blipFill>
-                  <pic:spPr>
-                    <a:xfrm><a:off x="0" y="0"/><a:ext cx="${wEmu}" cy="${hEmu}"/></a:xfrm>
-                    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
-                  </pic:spPr>
-                </pic:pic>
-              </a:graphicData>
-            </a:graphic>
-          </wp:inline>
-        </w:drawing></w:r></w:p>`;
-        resolve(xml);
-      };
-      img.src = dataUrl;
-    });
-  }
-
-  async function dataUrlToBytes(dataUrl) {
-    const b64 = dataUrl.split(',')[1];
-    const bin = atob(b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return bytes;
-  }
-
-  function mimeExt(dataUrl) {
-    const m = dataUrl.match(/data:image\/(\w+)/);
-    return m ? m[1].replace('jpeg','jpg') : 'png';
-  }
-
-  // ── RTE content → XML paragraphs ──
-  async function rteToXml(editorEl, imageFiles) {
-    let xml = '';
-    const children = editorEl.childNodes;
-
-    for (const node of children) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const t = node.textContent;
-        if (t) xml += wPara(wText(t));
-      } else if (node.nodeName === 'P' || node.nodeName === 'DIV') {
-        xml += await processBlock(node, imageFiles);
-      } else if (node.nodeName === 'IMG') {
-        xml += await processImg(node, imageFiles);
-      } else if (node.nodeName === 'BR') {
-        xml += wPara('');
-      }
-    }
-    return xml || wPara('');
-  }
-
-  async function processBlock(el, imageFiles) {
-    let xml = '';
-    for (const child of el.childNodes) {
-      if (child.nodeType === Node.TEXT_NODE) {
-        xml += wText(child.textContent);
-      } else if (child.nodeName === 'B' || child.nodeName === 'STRONG') {
-        xml += wText(child.textContent, true);
-      } else if (child.nodeName === 'I' || child.nodeName === 'EM') {
-        xml += wText(child.textContent, false, true);
-      } else if (child.nodeName === 'U') {
-        xml += wText(child.textContent, false, false, true);
-      } else if (child.nodeName === 'IMG') {
-        xml += await processImg(child, imageFiles);
-      } else if (child.nodeName === 'SPAN') {
-        xml += wText(child.textContent);
-      } else if (child.nodeName === 'BR') {
-        // handled as line break
-      } else {
-        xml += wText(child.textContent || '');
-      }
-    }
-    // Check for list items
-    if (el.nodeName === 'LI') {
-      return `<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr>${xml}</w:p>`;
-    }
-    return wPara(xml);
-  }
-
-  async function processImg(imgEl, imageFiles) {
-    const src = imgEl.src || imgEl.getAttribute('src') || '';
-    if (!src) return '';
-    const rId = `rId${imageFiles.length + 10}`;
-    const ext = mimeExt(src);
-    const bytes = await dataUrlToBytes(src);
-    imageFiles.push({ rId, ext, bytes, src });
-    const w = Math.min((imgEl.width || 400) / 96, 6);
-    return await imgToWxml(src, rId, w);
-  }
-
-  // ── Build the full docx ──
-  async function build(data) {
-    const imageFiles = [];
-
-    // Extract rich text content
-    const summEl  = document.getElementById('rte-summary');
-    const followEl = document.getElementById('rte-followup');
-    const summXml  = await rteToXml(summEl,  imageFiles);
-    const followXml= await rteToXml(followEl, imageFiles);
-
-    // ── Relationships for images ──
-    const imgRels = imageFiles.map(f =>
-      `<Relationship Id="${f.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${f.rId}.${f.ext}"/>`
-    ).join('');
-
-    // ── Numbering (for bullet lists) ──
-    const numberingXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:numbering xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
-  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:abstractNum w:abstractNumId="0">
-    <w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/>
-      <w:lvlJc w:val="left"/><w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr></w:lvl>
-  </w:abstractNum>
-  <w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>
-</w:numbering>`;
-
-    // ── Labor rows XML ──
-    let laborXml = '';
-    if (data.laborRows && data.laborRows.length) {
-      const hdr = wRow(
-        ['Date','Day','Std Reg','Std OT','Std Hol','Nxt Reg','Nxt OT','Nxt Hol','2nd Reg','2nd OT','2nd Hol','Notes']
-          .map(h => wCell(h, true, 'D5E8F0')).join('')
-      );
-      const rows = data.laborRows.map(r =>
-        wRow([r.date,r.dow,r.reg||'',r.ot||'',r.hol||'',r.nxt_reg||'',r.nxt_ot||'',r.nxt_hol||'',r.sec_reg||'',r.sec_ot||'',r.sec_hol||'',r.notes||'']
-          .map(v => wCell(v)).join(''))
-      ).join('');
-      laborXml = `<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9360" w:type="dxa"/></w:tblPr>${hdr}${rows}</w:tbl>`;
-    }
-
-    // ── Parts rows XML ──
-    let partsXml = '';
-    if (data.partsRows && data.partsRows.length) {
-      const hdr = wRow(['Part #','Description','Serial(s)','Qty'].map(h=>wCell(h,true,'D5E8F0')).join(''));
-      const rows = data.partsRows.map(r=>
-        wRow([r.num,r.desc,r.ser,r.qty].map(v=>wCell(v)).join(''))
-      ).join('');
-      partsXml = `<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9360" w:type="dxa"/></w:tblPr>${hdr}${rows}</w:tbl>`;
-    }
-
-    // ── Main document.xml ──
-    const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
-  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-  xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
-  xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-  xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
-<w:body>
-
-${wPara(wText('SERVICE WORK ORDER',true,false,true,14), '', 'center')}
-${wPara('')}
-
-<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9360" w:type="dxa"/></w:tblPr>
-${wRow(wCell('CUSTOMER',true,'1F4E79',1,4680) + wCell('SERVICE AGENCY',true,'1F4E79',1,4680))}
-${labelRow('Name:', esc(data.customerName), 1200, 3480)}
-${wRow(wCell('Purchase Order #',true,'E8F0F7',1,1200) + wCell(esc(data.poNumber),false,'',1,3480) +
-       wCell('Technician',true,'E8F0F7',1,1200) + wCell(esc(data.techName),false,'',1,3480))}
-${wRow(wCell('',false,'',1,4680) + wCell('Agency Order: ' + esc(data.serviceOrder),false,'',1,4680))}
-${wRow(wCell('',false,'',1,4680) + wCell('Product Line: ' + esc(data.productLine),false,'',1,4680))}
-${wRow(wCell('',false,'',1,4680) + wCell('System/Serial: ' + esc(data.systemSerial),false,'',1,4680))}
-</w:tbl>
-${wPara('')}
-
-<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9360" w:type="dxa"/></w:tblPr>
-${wRow(wCell('SERVICE ADDRESS',true,'1F4E79',1,4680) + wCell('LOCATION CONTACT',true,'1F4E79',1,4680))}
-${wRow(wCell(esc(data.serviceAddress),false,'',1,4680) +
-       wCell('Name: ' + esc(data.contactName),false,'',1,4680))}
-${wRow(wCell('',false,'',1,4680) + wCell('Phone: ' + esc(data.contactPhone),false,'',1,4680))}
-${wRow(wCell('',false,'',1,4680) + wCell('Email: ' + esc(data.contactEmail),false,'',1,4680))}
-</w:tbl>
-${wPara('')}
-
-<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9360" w:type="dxa"/></w:tblPr>
-${wRow(wCell('SCOPE OF WORK',true,'1F4E79',2,9360))}
-${wRow(wCell(esc(data.scope),false,'',2,9360))}
-</w:tbl>
-${wPara('')}
-
-${wPara(wText('SERVICE REPORT',true,false,true,12))}
-${wPara('')}
-
-<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9360" w:type="dxa"/></w:tblPr>
-${wRow(wCell('SUMMARY',true,'1F4E79',1,9360))}
-<w:tr><w:tc><w:tcPr><w:tcW w:w="9360" w:type="dxa"/></w:tcPr>${summXml}</w:tc></w:tr>
-</w:tbl>
-${wPara('')}
-
-<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9360" w:type="dxa"/></w:tblPr>
-${wRow(wCell('REQUIRED FOLLOW UP (IF APPLICABLE)',true,'1F4E79',1,9360))}
-<w:tr><w:tc><w:tcPr><w:tcW w:w="9360" w:type="dxa"/></w:tcPr>${followXml}</w:tc></w:tr>
-</w:tbl>
-${wPara('')}
-
-${laborXml ? `${wPara(wText('LABOR',true,false,true,12))}${wPara('')}${laborXml}${wPara('')}` : ''}
-${partsXml ? `${wPara(wText('PARTS',true,false,true,12))}${wPara('')}${partsXml}${wPara('')}` : ''}
-
-<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9360" w:type="dxa"/></w:tblPr>
-${wRow(wCell('ACKNOWLEDGEMENT',true,'1F4E79',2,9360))}
-${wRow(wCell('Service Technician Signature: ___________________________',false,'',1,4680) +
-       wCell('Customer Signature / Printed Name: ___________________________',false,'',1,4680))}
-</w:tbl>
-
-<w:sectPr>
-  <w:pgSz w:w="12240" w:h="15840"/>
-  <w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080"/>
-</w:sectPr>
-</w:body></w:document>`;
-
-    // ── Assemble all zip files ──
-    const zipFiles = [
-      { name:'[Content_Types].xml', data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml"  ContentType="application/xml"/>
-  <Default Extension="png"  ContentType="image/png"/>
-  <Default Extension="jpg"  ContentType="image/jpeg"/>
-  <Default Extension="jpeg" ContentType="image/jpeg"/>
-  <Default Extension="gif"  ContentType="image/gif"/>
-  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
-</Types>` },
-      { name:'_rels/.rels', data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>` },
-      { name:'word/_rels/document.xml.rels', data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
-  ${imgRels}
-</Relationships>` },
-      { name:'word/document.xml',  data: docXml },
-      { name:'word/numbering.xml', data: numberingXml },
-      { name:'word/styles.xml', data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:docDefaults><w:rPrDefault><w:rPr>
-    <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
-    <w:sz w:val="22"/><w:szCs w:val="22"/>
-  </w:rPr></w:rPrDefault></w:docDefaults>
-  <w:style w:type="table" w:styleId="TableGrid">
-    <w:name w:val="Table Grid"/>
-    <w:tblPr><w:tblBorders>
-      <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-      <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-      <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-      <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-      <w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-      <w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-    </w:tblBorders></w:tblPr>
-  </w:style>
-</w:styles>` },
-    ];
-
-    // Add image files
-    for (const f of imageFiles) {
-      zipFiles.push({ name: `word/media/${f.rId}.${f.ext}`, data: f.bytes });
-    }
-
-    return buildZip(zipFiles);
-  }
-
-  return { build };
-})();
-</script>
-
-<!-- ══════════════════════════════════════════════
-     APP LOGIC
-══════════════════════════════════════════════ -->
-<script>
-// ── Config ──────────────────────────────────────
-const CONFIG = {
-  clientId:  '8590561e-9ae0-4988-9889-c994688f8db2',
-  tenantId:  'eb06985d-06ca-4a17-81da-629ab99f6505',
-  redirectUri: 'https://lanceseguin.github.io/rtg-field-tools/',
-  scopes: ['Calendars.Read', 'User.Read'],
-  scopesShared: ['Calendars.Read', 'Calendars.Read.Shared', 'User.Read'],
-};
-
-// ── Settings (localStorage) ──────────────────────
-const Settings = {
-  get: (k, def='') => { try { const v = localStorage.getItem('rtg_'+k); return v !== null ? JSON.parse(v) : def; } catch { return def; } },
-  set: (k, v)      => { try { localStorage.setItem('rtg_'+k, JSON.stringify(v)); } catch {} },
-};
-
-// ── Auth (MSAL-lite PKCE) ────────────────────────
-const Auth = (() => {
-  let _token = null, _user = null;
-
-  function base64url(buf) {
-    return btoa(String.fromCharCode(...new Uint8Array(buf)))
-      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  }
-
-  async function genPKCE() {
-    const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)));
-    const digest   = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
-    return { verifier, challenge: base64url(digest) };
-  }
-
-  async function login() {
-    const { verifier, challenge } = await genPKCE();
-    const state = base64url(crypto.getRandomValues(new Uint8Array(16)));
-    sessionStorage.setItem('pkce_verifier', verifier);
-    sessionStorage.setItem('pkce_state', state);
-    const useShared = Settings.get('sharedCal', false);
-    const scopes = useShared ? CONFIG.scopesShared : CONFIG.scopes;
-    const params = new URLSearchParams({
-      client_id:     CONFIG.clientId,
-      response_type: 'code',
-      redirect_uri:  CONFIG.redirectUri,
-      scope:         scopes.join(' ') + ' offline_access',
-      state,
-      code_challenge:        challenge,
-      code_challenge_method: 'S256',
-      response_mode: 'fragment',
-    });
-    location.href = `https://login.microsoftonline.com/${CONFIG.tenantId}/oauth2/v2.0/authorize?${params}`;
-  }
-
-  async function handleRedirect() {
-    const hash = location.hash.substring(1);
-    if (!hash) return false;
-    const p = new URLSearchParams(hash);
-    const code = p.get('code');
-    if (!code) return false;
-
-    const verifier = sessionStorage.getItem('pkce_verifier');
-    if (!verifier) return false;
-
-    try {
-      const resp = await fetch(
-        `https://login.microsoftonline.com/${CONFIG.tenantId}/oauth2/v2.0/token`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id:     CONFIG.clientId,
-            grant_type:    'authorization_code',
-            code,
-            redirect_uri:  CONFIG.redirectUri,
-            code_verifier: verifier,
-          }),
-        }
-      );
-      const data = await resp.json();
-      if (data.access_token) {
-        _token = data.access_token;
-        sessionStorage.setItem('rtg_token', _token);
-        if (data.refresh_token) sessionStorage.setItem('rtg_refresh', data.refresh_token);
-        history.replaceState({}, '', location.pathname);
-        return true;
-      }
-    } catch (e) { console.error('Token exchange failed', e); }
-    return false;
-  }
-
-  function restoreSession() {
-    _token = sessionStorage.getItem('rtg_token');
-    return !!_token;
-  }
-
-  async function getUser() {
-    if (_user) return _user;
-    const t = getToken();
-    if (!t) return null;
-    const r = await fetch('https://graph.microsoft.com/v1.0/me', {
-      headers: { Authorization: `Bearer ${t}` }
-    });
-    if (r.ok) { _user = await r.json(); return _user; }
-    return null;
-  }
-
-  function getToken() { return _token || sessionStorage.getItem('rtg_token'); }
-  function logout()   { sessionStorage.clear(); _token = null; _user = null; }
-
-  return { login, handleRedirect, restoreSession, getUser, getToken, logout };
-})();
-
-// ── Graph API calls ──────────────────────────────
-const Graph = {
-  async get(url) {
-    const r = await fetch('https://graph.microsoft.com/v1.0' + url, {
-      headers: { Authorization: `Bearer ${Auth.getToken()}` }
-    });
-    if (!r.ok) throw new Error(`Graph ${r.status}: ${await r.text()}`);
-    return r.json();
-  },
-
-  async getCalendars() {
-    const data = await this.get('/me/calendars?$select=id,name,isDefaultCalendar,canEdit');
-    let cals = data.value || [];
-    // Optionally add shared calendar
-    if (Settings.get('sharedCal', false)) {
-      const email = Settings.get('sharedEmail', '');
-      if (email) {
-        try {
-          const sh = await this.get(`/users/${encodeURIComponent(email)}/calendars?$select=id,name`);
-          (sh.value || []).forEach(c => cals.push({ ...c, _shared: true, _sharedEmail: email }));
-        } catch(e) {
-          console.warn('Shared calendar unavailable:', e.message);
-        }
-      }
-    }
-    return cals;
-  },
-
-  async getEvents(calendarId, start, end, sharedEmail) {
-    const s = start.toISOString();
-    const e = end.toISOString();
-    const q = `$select=subject,body,start,end,location,bodyPreview&$filter=start/dateTime ge '${s}' and end/dateTime le '${e}'&$orderby=start/dateTime&$top=50`;
-    const base = sharedEmail
-      ? `/users/${encodeURIComponent(sharedEmail)}/calendars/${calendarId}/events`
-      : `/me/calendars/${calendarId}/events`;
-    const data = await this.get(`${base}?${q}`);
-    return data.value || [];
-  }
-};
-
-// ── Calendar UI ──────────────────────────────────
-const Cal = (() => {
-  let _cals = [], _events = [], _selected = null;
-
-  const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-
-  function fmtD(d) {
-    return `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}-${d.getFullYear()}`;
-  }
-
-  function parseDate(s) {
-    const [m,d,y] = s.split('-');
-    return new Date(+y, +m-1, +d);
-  }
-
-  async function init() {
-    try {
-      _cals = await Graph.getCalendars();
-      const sel = document.getElementById('cal-select');
-      sel.innerHTML = _cals.map((c,i) =>
-        `<option value="${i}">${c._shared ? '📤 ' : '📅 '}${c.name}</option>`
-      ).join('');
-    } catch(e) {
-      toast('Could not load calendars: ' + e.message, 'err');
-    }
-  }
-
-  function preset(p) {
-    const t = new Date();
-    let s = new Date(t), e = new Date(t);
-    if (p === 'week') {
-      s.setDate(t.getDate() - ((t.getDay()+6)%7));
-      e = new Date(s); e.setDate(s.getDate()+6);
-    } else if (p === 'month') {
-      s = new Date(t.getFullYear(), t.getMonth(), 1);
-      e = new Date(t.getFullYear(), t.getMonth()+1, 0);
-    }
-    document.getElementById('cal-start').value = fmtD(s);
-    document.getElementById('cal-end').value   = fmtD(e);
-    load();
-  }
-
-  async function load() {
-    const idx = parseInt(document.getElementById('cal-select').value)||0;
-    const cal = _cals[idx];
-    if (!cal) return;
-    const startS = document.getElementById('cal-start').value;
-    const endS   = document.getElementById('cal-end').value;
-    if (!startS || !endS) return;
-
-    const list = document.getElementById('events-list');
-    list.innerHTML = '<div class="events-loading">Loading events…</div>';
-    _selected = null;
-
-    try {
-      const start = parseDate(startS);
-      const end   = parseDate(endS);
-      end.setDate(end.getDate()+1);
-      _events = await Graph.getEvents(cal.id, start, end, cal._sharedEmail);
-
-      if (!_events.length) {
-        list.innerHTML = '<div class="events-empty">No events found in this date range.</div>';
-        return;
-      }
-
-      list.innerHTML = _events.map((ev,i) => {
-        const s = new Date(ev.start.dateTime || ev.start.date);
-        const e = new Date(ev.end.dateTime   || ev.end.date);
-        const fmt = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-        const ftm = d => d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-        return `<div class="event-card" id="ec-${i}" onclick="Cal.select(${i})">
-          <div class="event-subj">${ev.subject || '(No subject)'}</div>
-          <div class="event-when">${fmt(s)} ${ftm(s)} → ${fmt(e)} ${ftm(e)}</div>
-          ${ev.location?.displayName ? `<div class="event-loc">📍 ${ev.location.displayName}</div>` : ''}
-        </div>`;
-      }).join('');
-    } catch(e) {
-      list.innerHTML = `<div class="events-empty">Error: ${e.message}</div>`;
-      toast(e.message, 'err');
-    }
-  }
-
-  function select(i) {
-    document.querySelectorAll('.event-card').forEach(el=>el.classList.remove('selected'));
-    document.getElementById('ec-'+i)?.classList.add('selected');
-    _selected = _events[i];
-  }
-
-  async function useSelected() {
-    if (!_selected) { toast('Select an event first', 'warn'); return; }
-    const ev = _selected;
-    const body = ev.body?.content || ev.bodyPreview || '';
-
-    // Parse fields from subject + body (mirrors parsing.py logic)
-    const fields = parseEventFields(ev.subject || '', body);
-
-    const set = (id, v) => { if (v) { const el = document.getElementById(id); if(el) el.value = v; } };
-    set('f-customer', fields.CustomerName);
-    set('f-agency',   fields.CustomerName);
-    set('f-tech',     fields.ServiceTechnician || Settings.get('defaultTech',''));
-    set('f-order',    fields.ServiceAgencyOrder);
-    set('f-cname',    fields.ContactName);
-    set('f-cphone',   fields.ContactPhone);
-    set('f-cemail',   fields.ContactEmail);
-    set('f-po',       fields.PONumber);
-    if (fields.ServiceAddress) document.getElementById('f-address').value = fields.ServiceAddress;
-    if (fields.Scope)          document.getElementById('f-scope').value   = fields.Scope;
-
-    // Auto-populate labor rows from event dates
-    const start = new Date(ev.start.dateTime || ev.start.date);
-    const end   = new Date(ev.end.dateTime   || ev.end.date);
-    const dates = [];
-    const cur = new Date(start); cur.setHours(0,0,0,0);
-    const endDay = new Date(end); endDay.setHours(0,0,0,0);
-    while (cur < endDay) { dates.push(new Date(cur)); cur.setDate(cur.getDate()+1); }
-    if (!dates.length) dates.push(start);
-    Labor.populateFromDates(dates);
-
-    toast('Fields populated from calendar event ✓');
-    WO.tab('request', document.querySelector('.tab-btn'));
-  }
-
-  // Mirror of parsing.py key logic — runs in browser
-  function parseEventFields(subject, body) {
-    const out = {};
-    const parts = subject.split(' - ').map(s=>s.trim());
-    if (parts[0]) out.CustomerName = parts[0];
-    if (parts[1]) out.ServiceTechnician = parts[1];
-    const slord = subject.match(/\bSLORD\d{6}\b/i);
-    if (slord) out.ServiceAgencyOrder = slord[0];
-
-    // Contact parsing from body
-    const emailM = body.match(/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/);
-    if (emailM) out.ContactEmail = emailM[0];
-    const phoneM = body.match(/(?:\+?\d[\d\s().\-]{6,}\d)/);
-    if (phoneM) out.ContactPhone = phoneM[0];
-
-    // PO
-    const poM = body.match(/(?:PO|P\.?O\.?|Purchase\s*Order)[:\s#]+([A-Za-z0-9\-_/.]{2,})/i);
-    if (poM && /\d/.test(poM[1])) out.PONumber = poM[1].trim();
-
-    // Address
-    const addrM = body.match(/Site\s+Address[:\-\s]+([^\n]+(?:\n[^\n]+)?)/i);
-    if (addrM) out.ServiceAddress = addrM[1].trim();
-
-    // Scope
-    const scopeM = body.match(/Scope[:\-\s]+([^\n]+(?:\n[^\n]+){0,10})/i);
-    if (scopeM) out.Scope = scopeM[1].trim();
-
-    return out;
-  }
-
-  return { init, preset, load, select, useSelected };
-})();
-
-// ── Labor ────────────────────────────────────────
-const Labor = (() => {
-  let rows = [];
-  const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-
-  function fmtDs(d) {
-    return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;
-  }
-
-  function populateFromDates(dates) {
-    rows = [];
-    document.getElementById('labor-body').innerHTML = '';
-    dates.forEach(d => addRow(d));
-  }
-
-  function addManual() { addRow(new Date()); }
-
-  function addRow(dateObj) {
-    const id  = Date.now() + Math.random();
-    const ds  = fmtDs(dateObj);
-    const dow = DAYS[dateObj.getDay()];
-    const row = { id, date:ds, dow, reg:'',ot:'',hol:'',nxt_reg:'',nxt_ot:'',nxt_hol:'',sec_reg:'',sec_ot:'',sec_hol:'',notes:'' };
-    rows.push(row);
-
-    const inp = (f, w=52) => `<input type="number" min="0" step="0.5" class="tbl-input" style="width:${w}px"
-      oninput="Labor._upd(${id},'${f}',this.value)">`;
-
-    const tr = document.createElement('tr');
-    tr.id = 'lr-'+id;
-    tr.innerHTML = `
-      <td><span class="td-static">${ds}</span></td>
-      <td><span class="td-dow">${dow}</span></td>
-      <td>${inp('reg')}</td><td>${inp('ot')}</td><td>${inp('hol')}</td>
-      <td>${inp('nxt_reg')}</td><td>${inp('nxt_ot')}</td><td>${inp('nxt_hol')}</td>
-      <td>${inp('sec_reg')}</td><td>${inp('sec_ot')}</td><td>${inp('sec_hol')}</td>
-      <td><input type="text" class="tbl-input" style="width:120px" placeholder="Notes"
-           oninput="Labor._upd(${id},'notes',this.value)"></td>
-      <td><button class="btn-rm" onclick="Labor._rm(${id})">✕</button></td>`;
-    document.getElementById('labor-body').appendChild(tr);
-  }
-
-  function _upd(id, f, v) { const r = rows.find(r=>r.id===id); if(r) r[f]=v; }
-  function _rm(id)  { rows = rows.filter(r=>r.id!==id); document.getElementById('lr-'+id)?.remove(); }
-  function getRows() { return rows; }
-
-  return { populateFromDates, addManual, addRow, _upd, _rm, getRows };
-})();
-
-// ── Parts ────────────────────────────────────────
-const Parts = (() => {
-  let rows = [];
-
-  function add() {
-    const num  = document.getElementById('pt-num').value.trim();
-    const desc = document.getElementById('pt-desc').value.trim();
-    const ser  = document.getElementById('pt-ser').value.trim();
-    const qty  = parseFloat(document.getElementById('pt-qty').value)||1;
-    const id   = Date.now();
-    rows.push({id,num,desc,ser,qty});
-    const tr = document.createElement('tr');
-    tr.id = 'pr-'+id;
-    tr.innerHTML = `<td class="td-static">${num}</td><td class="td-static">${desc}</td>
-      <td class="td-static">${ser}</td><td class="td-static">${qty}</td>
-      <td><button class="btn-rm" onclick="Parts._rm(${id})">✕</button></td>`;
-    document.getElementById('parts-body').appendChild(tr);
-    ['pt-num','pt-desc','pt-ser'].forEach(id=>{ document.getElementById(id).value=''; });
-    document.getElementById('pt-qty').value='1';
-  }
-
-  function _rm(id) { rows=rows.filter(r=>r.id!==id); document.getElementById('pr-'+id)?.remove(); }
-  function getRows() { return rows; }
-  return { add, _rm, getRows };
-})();
-
-// ── Rich Text Editor ─────────────────────────────
-const RTE = (() => {
-  function init(editorId, toolbarId) {
-    const ed = document.getElementById(editorId);
-    const tb = document.getElementById(toolbarId);
-
-    // Placeholder
-    ed.addEventListener('focus', () => ed.classList.remove('empty'));
-    ed.addEventListener('blur',  () => { if(!ed.textContent.trim() && !ed.querySelector('img')) ed.classList.add('empty'); });
-
-    // Paste images
-    ed.addEventListener('paste', e => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      for (const item of items) {
-        if (item.type.startsWith('image/')) {
-          e.preventDefault();
-          const file = item.getAsFile();
-          const reader = new FileReader();
-          reader.onload = ev => insertImg(ed, ev.target.result);
-          reader.readAsDataURL(file);
-        }
-      }
-    });
-
-    // Build toolbar
-    const groups = [
-      [
-        { cmd:'bold',      icon:'<b>B</b>',  tip:'Bold' },
-        { cmd:'italic',    icon:'<i>I</i>',  tip:'Italic' },
-        { cmd:'underline', icon:'<u>U</u>',  tip:'Underline' },
-        { cmd:'strikeThrough', icon:'<s>S</s>', tip:'Strikethrough' },
-      ], 'sep', [
-        { cmd:'insertUnorderedList', icon:'• List',  tip:'Bullet list' },
-        { cmd:'insertOrderedList',   icon:'1. List', tip:'Numbered list' },
-        { cmd:'outdent',  icon:'⇤', tip:'Outdent' },
-        { cmd:'indent',   icon:'⇥', tip:'Indent' },
-      ], 'sep', [
-        { cmd:'justifyLeft',   icon:'≡L', tip:'Align left' },
-        { cmd:'justifyCenter', icon:'≡C', tip:'Center' },
-        { cmd:'justifyRight',  icon:'≡R', tip:'Align right' },
-      ], 'sep', [
-        { special:'fontSize' },
-        { special:'foreColor' },
-      ], 'sep', [
-        { special:'image', icon:'🖼', tip:'Insert image' },
-        { cmd:'removeFormat', icon:'✕fmt', tip:'Clear formatting' },
-      ]
-    ];
-
-    groups.forEach(g => {
-      if (g === 'sep') { const s=document.createElement('div'); s.className='rte-sep'; tb.appendChild(s); return; }
-      g.forEach(item => {
-        if (item.special === 'fontSize') {
-          const sel = document.createElement('select');
-          sel.className = 'rte-select';
-          sel.title = 'Font size';
-          [8,9,10,11,12,14,16,18,20,24,28,32,36].forEach(sz => {
-            const o = document.createElement('option');
-            o.value = sz; o.textContent = sz+'pt';
-            if (sz===11) o.selected=true;
-            sel.appendChild(o);
-          });
-          sel.addEventListener('change', () => { ed.focus(); document.execCommand('fontSize',false,'7');
-            ed.querySelectorAll('font[size="7"]').forEach(f=>{f.removeAttribute('size');f.style.fontSize=sel.value+'pt';}); });
-          tb.appendChild(sel);
-        } else if (item.special === 'foreColor') {
-          const lbl = document.createElement('label');
-          lbl.className='rte-btn'; lbl.title='Text color'; lbl.textContent='🎨';
-          const inp = document.createElement('input');
-          inp.type='color'; inp.style.cssText='width:0;height:0;opacity:0;position:absolute';
-          inp.addEventListener('input', () => { ed.focus(); document.execCommand('foreColor',false,inp.value); });
-          lbl.appendChild(inp); tb.appendChild(lbl);
-        } else if (item.special === 'image') {
-          const btn = document.createElement('button');
-          btn.className='rte-btn'; btn.type='button'; btn.title='Insert image'; btn.innerHTML=item.icon;
-          btn.addEventListener('click', () => {
-            const fi = document.createElement('input');
-            fi.type='file'; fi.accept='image/*'; fi.multiple=true;
-            fi.addEventListener('change', () => {
-              Array.from(fi.files).forEach(f => {
-                const r = new FileReader();
-                r.onload = ev => insertImg(ed, ev.target.result);
-                r.readAsDataURL(f);
-              });
-            });
-            fi.click();
-          });
-          tb.appendChild(btn);
-        } else {
-          const btn = document.createElement('button');
-          btn.className='rte-btn'; btn.type='button'; btn.title=item.tip||'';
-          btn.innerHTML=item.icon;
-          btn.addEventListener('click', () => { ed.focus(); document.execCommand(item.cmd,false,null); });
-          tb.appendChild(btn);
-        }
-      });
-    });
-  }
-
-  function insertImg(editor, src) {
-    editor.focus();
-    const img = document.createElement('img');
-    img.src = src;
-    img.style.cssText = 'max-width:100%;cursor:move;';
-    img.draggable = true;
-    img.addEventListener('click', () => {
-      editor.querySelectorAll('img').forEach(i=>i.classList.remove('selected'));
-      img.classList.add('selected');
-    });
-    // Make resizable via mousedown on corner handle — simplified
-    const range = window.getSelection()?.getRangeAt(0);
-    if (range) { range.insertNode(img); range.collapse(false); }
-    else editor.appendChild(img);
-  }
-
-  return { init };
-})();
-
-// ── Work Order controller ────────────────────────
-const WO = {
-  tab(name, btnEl) {
-    document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    document.getElementById('tab-'+name)?.classList.add('active');
-    // find the matching button
-    document.querySelectorAll('.tab-btn').forEach(b => {
-      if (b.onclick?.toString().includes(`'${name}'`)) b.classList.add('active');
-    });
-    if (name==='output') WO.updateSummary();
-  },
-
-  updateSummary() {
-    const g = id => document.getElementById(id)?.value?.trim()||'';
-    const pairs = [
-      ['Customer',     g('f-customer')],
-      ['PO Number',    g('f-po')],
-      ['Agency Order', g('f-order')],
-      ['Technician',   g('f-tech')],
-      ['Product Line', g('f-product')],
-      ['Serial',       g('f-serial')],
-      ['Contact',      g('f-cname') + (g('f-cphone') ? ' · '+g('f-cphone') : '')],
-      ['Labor Rows',   String(Labor.getRows().length)],
-      ['Parts Rows',   String(Parts.getRows().length)],
-    ];
-    document.getElementById('form-summary').innerHTML = pairs
-      .filter(([,v])=>v)
-      .map(([k,v])=>`<div class="sum-key">${k}</div><div class="sum-val">${v}</div>`)
-      .join('');
-  },
-
-  async generate() {
-    const order = document.getElementById('f-order').value.trim();
-    if (!order) { toast('Service Agency Order number is required','warn'); return; }
-
-    const btn  = document.getElementById('gen-btn');
-    const spin = document.getElementById('gen-spin');
-    const lbl  = document.getElementById('gen-lbl');
-    btn.disabled=true; spin.style.display='inline-block'; lbl.textContent='Generating…';
-
-    try {
-      const g = id => document.getElementById(id)?.value||'';
-      const data = {
-        customerName:   g('f-customer'), poNumber:    g('f-po'),
-        techName:       g('f-tech'),     serviceOrder:g('f-order'),
-        productLine:    g('f-product'),  systemSerial:g('f-serial'),
-        serviceAddress: g('f-address'),  contactName: g('f-cname'),
-        contactPhone:   g('f-cphone'),   contactEmail:g('f-cemail'),
-        scope:          g('f-scope'),
-        laborRows:  Labor.getRows(),
-        partsRows:  Parts.getRows(),
-      };
-
-      const bytes  = await DOCX.build(data);
-      const blob   = new Blob([bytes], { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-      const cust   = data.customerName.replace(/[^a-z0-9 \-_]/gi,'').trim().replace(/ /g,'_');
-      const today  = new Date().toISOString().slice(0,10);
-      const pattern= document.getElementById('f-pattern').value||'{ServiceAgencyOrder}_Work Order.docx';
-      const fname  = pattern.replace('{ServiceAgencyOrder}',order).replace('{Customer}',cust).replace('{Date}',today);
-
-      const url = URL.createObjectURL(blob);
-      const a   = Object.assign(document.createElement('a'), { href:url, download:fname });
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(()=>URL.revokeObjectURL(url), 5000);
-      toast('✔ ' + fname + ' downloaded');
-    } catch(e) {
-      toast('Error: '+e.message,'err');
-      console.error(e);
-    } finally {
-      btn.disabled=false; spin.style.display='none'; lbl.textContent='⚙ Generate & Download';
-    }
-  }
-};
-
-// ── App controller ───────────────────────────────
-const App = {
-  async init() {
-    // Handle OAuth redirect
-    if (location.hash.includes('code=')) {
-      const ok = await Auth.handleRedirect();
-      if (ok) { await App.enterApp(); return; }
-    }
-    // Restore existing session
-    if (Auth.restoreSession()) { await App.enterApp(); return; }
-    // Show login
-    App.show('login');
-  },
-
-  async login() { await Auth.login(); },
-
-  logout() {
-    Auth.logout();
-    App.show('login');
-  },
-
-  async enterApp() {
-    const user = await Auth.getUser();
-    const name = user?.displayName || user?.mail || 'User';
-    document.getElementById('hdr-username').textContent = name;
-    App.show('hub');
-    // Load settings into modal
-    document.getElementById('tog-shared').checked = Settings.get('sharedCal', false);
-    document.getElementById('set-tech').value      = Settings.get('defaultTech', '');
-    document.getElementById('set-shared-email').value = Settings.get('sharedEmail', '');
-    // Pre-fill tech
-    const tech = Settings.get('defaultTech','');
-    if (tech) document.getElementById('f-tech').value = tech;
-  },
-
-  show(screen) {
-    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-    document.getElementById('screen-'+screen)?.classList.add('active');
-  },
-
-  showHub() { App.show('hub'); },
-
-  async showWO() {
-    App.show('wo');
-    // Init RTE editors
-    RTE.init('rte-summary',  'rte-summary-tb');
-    RTE.init('rte-followup', 'rte-followup-tb');
-    // Pre-fill tech
-    const tech = Settings.get('defaultTech','');
-    if (tech && !document.getElementById('f-tech').value)
-      document.getElementById('f-tech').value = tech;
-    // Set default date range
-    const t = new Date();
-    const s = new Date(t); s.setDate(t.getDate()-7);
-    const e = new Date(t); e.setDate(t.getDate()+30);
-    const fmtD = d => `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}-${d.getFullYear()}`;
-    document.getElementById('cal-start').value = fmtD(s);
-    document.getElementById('cal-end').value   = fmtD(e);
-    // Load calendars
-    await Cal.init();
-  },
-
-  openSettings() {
-    document.getElementById('settings-modal').classList.add('open');
-  },
-  closeSettings() {
-    document.getElementById('settings-modal').classList.remove('open');
-    // Re-apply tech default
-    const tech = Settings.get('defaultTech','');
-    if (tech) document.getElementById('f-tech').value = tech;
-  },
-  saveSetting(k, v) { Settings.set(k, v); },
-};
-
-// ── Toast ────────────────────────────────────────
-let _toastTimer;
-function toast(msg, type='') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast' + (type ? ' '+type : '');
-  el.style.display='block';
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(()=>{ el.style.display='none'; }, 5000);
-}
-
-// Close settings on backdrop click
-document.getElementById('settings-modal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) App.closeSettings();
-});
-
-// ── Boot ─────────────────────────────────────────
-App.init();
-</script>
 </body>
 </html>
