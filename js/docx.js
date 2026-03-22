@@ -176,6 +176,14 @@ const DOCX = (() => {
     const summaryImgXml  = _collectRTEImages('rte-summary');
     const followupImgXml = _collectRTEImages('rte-followup');
 
+    // 2b. Helper: convert multiline values to Word XML line breaks
+    // We use a placeholder that survives XML escaping, then swap it out
+    const NL_PLACEHOLDER = '___NEWLINE___';
+    function mlEsc(val) {
+      // Replace newlines with placeholder BEFORE _esc so they survive escaping
+      return (val || '').replace(/\n/g, NL_PLACEHOLDER);
+    }
+
     // 3. Token map
     const tokenMap = {
       '{{CustomerName}}':       formData.customerName   || '',
@@ -185,13 +193,13 @@ const DOCX = (() => {
       '{{ServiceAgencyOrder}}': formData.serviceOrder   || '',
       '{{ProductLine}}':        formData.productLine    || '',
       '{{SystemSerial}}':       formData.systemSerial   || '',
-      '{{ServiceAddress}}':     formData.serviceAddress || '',
+      '{{ServiceAddress}}':     mlEsc(formData.serviceAddress),
       '{{ContactName}}':        formData.contactName    || '',
       '{{ContactNumber}}':      formData.contactPhone   || '',
       '{{ContactEmail}}':       formData.contactEmail   || '',
-      '{{Scope}}':              formData.scope          || '',
-      '{{Summary}}':            _rteText('rte-summary'),
-      '{{FollowUp}}':           _rteText('rte-followup'),
+      '{{Scope}}':              mlEsc(formData.scope),
+      '{{Summary}}':            mlEsc(_rteText('rte-summary')),
+      '{{FollowUp}}':           mlEsc(_rteText('rte-followup')),
       '{{customer_name}}':      formData.customerName   || '',
       '{{systemserial}}':       formData.systemSerial   || '',
     };
@@ -224,6 +232,11 @@ const DOCX = (() => {
 
     _injectAfterCell('Summary',  summaryImgXml);
     _injectAfterCell('FollowUp', followupImgXml);
+
+    // 5c. Convert newline placeholders to Word line breaks <w:br/>
+    // The placeholder survived XML escaping; now replace with proper Word XML
+    xml = xml.replace(/___NEWLINE___/g,
+      '</w:t></w:r><w:r><w:br/></w:r><w:r><w:t xml:space="preserve">');
 
     // 6. Expand labor rows
     xml = _expandRows(xml, 'L.Date', formData.laborRows || [], r => ({
