@@ -175,138 +175,164 @@ const RTE = (() => {
     const inst = _instances[editorId];
     if (!inst) return;
 
-    // Stagger position so multiple images don't stack exactly
     const offset = inst.images.length * 20;
-    const imgData = {
-      src,
-      x: 10 + offset,
-      y: 10 + offset,
-      w: 300,
-      h: null,   // computed after image loads
-    };
+    const imgData = { src, x: 10 + offset, y: 10 + offset, w: 300, h: 200 };
 
-    // Create overlay container
+    // Overlay container — drag target
     const overlay = document.createElement('div');
     overlay.style.cssText =
       `position:absolute;left:${imgData.x}px;top:${imgData.y}px;` +
-      `width:${imgData.w}px;height:200px;` +
-      'cursor:move;user-select:none;z-index:10;overflow:visible;';
+      `width:${imgData.w}px;height:${imgData.h}px;` +
+      'cursor:move;user-select:none;z-index:10;';
 
-    // The image itself
+    // Image
     const img = document.createElement('img');
     img.src = src;
-    img.style.cssText = 'width:100%;display:block;border:2px solid transparent;box-sizing:border-box;';
-    img.draggable = false;  // prevent browser native drag
+    img.draggable = false;
+    img.style.cssText = 'width:100%;height:100%;display:block;object-fit:contain;' +
+      'border:2px solid transparent;box-sizing:border-box;pointer-events:none;';
 
-    // Set height once loaded — also update overlay dimensions
     img.onload = () => {
       const ar = img.naturalHeight / Math.max(img.naturalWidth, 1);
       imgData.h = Math.round(imgData.w * ar);
       overlay.style.height = imgData.h + 'px';
-      overlay.style.width  = imgData.w + 'px';
+      _updateHandlePos(entry);
     };
 
-    // Resize handle (bottom-right corner)
-    const handle = document.createElement('div');
-    handle.style.cssText =
-      'position:absolute;right:-7px;bottom:-7px;width:16px;height:16px;' +
-      'background:#00b8d9;border:2px solid #fff;border-radius:50%;' +
-      'cursor:se-resize;display:none;z-index:11;box-shadow:0 1px 4px rgba(0,0,0,0.4);';
-
-    // Delete button (top-right)
+    // Delete button — inside overlay top-right
     const delBtn = document.createElement('div');
     delBtn.innerHTML = '✕';
     delBtn.style.cssText =
-      'position:absolute;right:-8px;top:-8px;width:18px;height:18px;' +
-      'background:#e53e3e;color:#fff;border-radius:50%;font-size:10px;' +
-      'display:none;align-items:center;justify-content:center;cursor:pointer;' +
-      'z-index:12;line-height:18px;text-align:center;';
+      'position:absolute;top:-10px;right:-10px;width:20px;height:20px;' +
+      'background:#e53e3e;color:#fff;border-radius:50%;font-size:11px;' +
+      'display:none;align-items:center;justify-content:center;' +
+      'cursor:pointer;z-index:30;line-height:20px;text-align:center;' +
+      'pointer-events:all;font-weight:bold;';
+
+    // Resize handle — SEPARATE element appended to wrapper, not inside overlay
+    // This avoids all event bubbling issues between handle and overlay
+    const handle = document.createElement('div');
+    handle.style.cssText =
+      'position:absolute;width:18px;height:18px;' +
+      'background:#00b8d9;border:2px solid #fff;border-radius:50%;' +
+      'cursor:se-resize;display:none;z-index:30;' +
+      'box-shadow:0 2px 6px rgba(0,0,0,0.4);pointer-events:all;';
 
     overlay.appendChild(img);
-    overlay.appendChild(handle);
     overlay.appendChild(delBtn);
     inst.wrapper.appendChild(overlay);
+    inst.wrapper.appendChild(handle);  // handle is sibling of overlay, not child
 
     const entry = { overlay, img, handle, delBtn, imgData };
     inst.images.push(entry);
 
-    // ── Click to select ───────────────────────────────────────────────────
-    overlay.addEventListener('mousedown', e => {
-      if (e.target === handle) return;  // let resize handle its own event
-      if (e.target === delBtn) return;
+    function _updateHandlePos(en) {
+      // Position handle at bottom-right corner of overlay
+      const x = en.imgData.x + en.imgData.w - 6;
+      const y = en.imgData.y + en.imgData.h - 6;
+      en.handle.style.left = x + 'px';
+      en.handle.style.top  = y + 'px';
+    }
+    entry._updateHandlePos = _updateHandlePos;
+
+    // ── Handle mousedown — no bubbling issues since it's not inside overlay ─
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
       e.stopPropagation();
       _selectImg(inst, entry);
-      _startDrag(e, inst, entry);
+      _startResize(e, inst, entry, _updateHandlePos);
     });
-
-    // ── Delete ────────────────────────────────────────────────────────────
-    delBtn.addEventListener('mousedown', e => {
+    handle.addEventListener('touchstart', e => {
+      e.preventDefault();
       e.stopPropagation();
+      _selectImg(inst, entry);
+      _startResize(e.touches[0], inst, entry, _updateHandlePos);
+    }, { passive: false });
+
+    // ── Delete
+    delBtn.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      handle.remove();
       _removeImg(inst, entry);
     });
 
-    // ── Resize ───────────────────────────────────────────────────────────
-    handle.addEventListener('mousedown', e => {
+    // ── Overlay drag
+    overlay.addEventListener('mousedown', e => {
       e.stopPropagation();
-      e.preventDefault();
-      _startResize(e, inst, entry);
+      _selectImg(inst, entry);
+      _startDrag(e, inst, entry, _updateHandlePos);
     });
+    overlay.addEventListener('touchstart', e => {
+      e.stopPropagation();
+      _selectImg(inst, entry);
+      _startDrag(e.touches[0], inst, entry, _updateHandlePos);
+    }, { passive: false });
 
-    // Auto-select when first inserted
     setTimeout(() => _selectImg(inst, entry), 50);
   }
+
 
   // ── Select / deselect ─────────────────────────────────────────────────────
   function _selectImg(inst, entry) {
     _deselectAll(inst);
     inst.selectedImg = entry;
-    entry.img.style.border       = '2px solid #00b8d9';
-    entry.handle.style.display   = 'block';
-    entry.delBtn.style.display   = 'flex';
+    entry.img.style.border     = '2px solid #00b8d9';
+    entry.handle.style.display = 'block';
+    entry.delBtn.style.display = 'flex';
+    if (entry._updateHandlePos) entry._updateHandlePos(entry);
   }
 
   function _deselectAll(inst) {
     inst.images.forEach(e => {
-      e.img.style.border       = '2px solid transparent';
-      e.handle.style.display   = 'none';
-      e.delBtn.style.display   = 'none';
+      e.img.style.border     = '2px solid transparent';
+      e.handle.style.display = 'none';
+      e.delBtn.style.display = 'none';
     });
     inst.selectedImg = null;
   }
 
   function _removeImg(inst, entry) {
     entry.overlay.remove();
+    entry.handle.remove();
     inst.images = inst.images.filter(e => e !== entry);
     inst.selectedImg = null;
   }
 
   // ── Drag to move ──────────────────────────────────────────────────────────
-  function _startDrag(e, inst, entry) {
+  function _startDrag(e, inst, entry, updateHandle) {
     const startX  = e.clientX;
     const startY  = e.clientY;
     const startOX = entry.imgData.x;
     const startOY = entry.imgData.y;
 
-    const onMove = ev => {
-      const dx = ev.clientX - startX;
-      const dy = ev.clientY - startY;
+    function _move(clientX, clientY) {
+      const dx = clientX - startX;
+      const dy = clientY - startY;
       entry.imgData.x = Math.max(0, startOX + dx);
       entry.imgData.y = Math.max(0, startOY + dy);
       entry.overlay.style.left = entry.imgData.x + 'px';
       entry.overlay.style.top  = entry.imgData.y + 'px';
-    };
+      if (updateHandle) updateHandle(entry);
+    }
 
-    const onUp = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup',   onUp);
+    const onMove      = ev => _move(ev.clientX, ev.clientY);
+    const onTouchMove = ev => { ev.preventDefault(); _move(ev.touches[0].clientX, ev.touches[0].clientY); };
+    const onUp        = () => {
+      document.removeEventListener('mousemove',  onMove);
+      document.removeEventListener('mouseup',    onUp);
+      document.removeEventListener('touchmove',  onTouchMove);
+      document.removeEventListener('touchend',   onUp);
     };
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup',   onUp);
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend',  onUp);
   }
 
   // ── Resize from corner handle ─────────────────────────────────────────────
-  function _startResize(e, inst, entry) {
+  function _startResize(e, inst, entry, updateHandle) {
     e.preventDefault();
     const startX  = e.clientX;
     const startY  = e.clientY;
@@ -317,23 +343,36 @@ const RTE = (() => {
     const onMove = ev => {
       const dx   = ev.clientX - startX;
       const dy   = ev.clientY - startY;
-      // Allow resize by width (drag right) or height (drag down), take the larger delta
+      // Use whichever axis has more movement
       const delta = Math.abs(dx) >= Math.abs(dy) ? dx : dy / ar;
       const newW = Math.max(60, startW + delta);
       const newH = Math.round(newW * ar);
       entry.imgData.w = newW;
       entry.imgData.h = newH;
+      // Update both the overlay container AND the image element
       entry.overlay.style.width  = newW + 'px';
       entry.overlay.style.height = newH + 'px';
+      entry.img.style.width  = '100%';
+      entry.img.style.height = '100%';
+      if (updateHandle) updateHandle(entry);
     };
 
+    const onTouchMove = ev => {
+      ev.preventDefault();
+      onMove({ clientX: ev.touches[0].clientX, clientY: ev.touches[0].clientY });
+    };
     const onUp = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup',   onUp);
+      entry._resizing = false;
+      document.removeEventListener('mousemove',  onMove);
+      document.removeEventListener('mouseup',    onUp);
+      document.removeEventListener('touchmove',  onTouchMove);
+      document.removeEventListener('touchend',   onUp);
     };
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup',   onUp);
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend',  onUp);
   }
 
   // ── Get image data for docx export ───────────────────────────────────────
