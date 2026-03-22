@@ -187,10 +187,16 @@ const DOCX = (() => {
       '{{systemserial}}':       formData.systemSerial   || '',
     };
 
-    // 5a. Strip Word content control wrappers (<w:sdt>) — these cause the
-    //     bracket/cursor indicators visible in Word. We keep the inner
-    //     sdtContent and discard the wrapper, handling nested sdts correctly.
+    // 5a. Strip elements that cause bracket/cursor indicators in Word:
+    //   <w:sdt> content controls  → keep inner sdtContent, drop wrapper
+    //   <w:permStart> / <w:permEnd> → editing permission markers, drop entirely
     xml = _stripSdtWrappers(xml);
+
+    // 5b. Remove editing permission markers — these show as bracket cursors in Word
+    xml = xml.replace(/<w:permStart[^/]*\/>/g, '');
+    xml = xml.replace(/<w:permEnd[^/]*\/>/g, '');
+    xml = xml.replace(/<w:permStart[^/]*\/>/g, '');
+    xml = xml.replace(/<w:permEnd[^/]*\/>/g, '');
 
     // 5b. Replace flat tokens
     xml = _replaceAllTokens(xml, tokenMap);
