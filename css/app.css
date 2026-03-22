@@ -398,7 +398,6 @@ body::before {
   transition: all 0.15s;
 }
 .preset-btn:hover         { border-color: var(--cyan); color: var(--cyan); }
-.preset-btn.refresh       { margin-left: auto; }
 
 /* ── 12. Event Cards ───────────────────────────────────────────────────────── */
 .events-scroll  { flex: 1; overflow-y: auto; padding: 8px; min-height: 0; }
@@ -452,8 +451,25 @@ body::before {
 .tab-pane             { display: none; padding: 24px 28px; }
 .tab-pane.active      { display: block; }
 
-/* Report tab — image overlays need the wrapper to have enough room */
-#tab-report           { min-height: calc(100vh - 160px); }
+/* Report tab — flex column so editors fill available space */
+#tab-report {
+  display: none;
+  flex-direction: column;
+  min-height: calc(100vh - 160px);
+}
+#tab-report.active {
+  display: flex;
+  flex-direction: column;
+}
+/* Each RTE section grows to fill available space */
+#tab-report .rte-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+#tab-report .rte-wrap:last-of-type {
+  flex: 0 0 auto;
+}
 
 /* ── 15. Form Fields ───────────────────────────────────────────────────────── */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; margin-bottom: 20px; }
@@ -506,15 +522,17 @@ body::before {
 }
 .rte-editor {
   background: var(--field-bg); color: var(--field-fg);
-  min-height: 220px; padding: 12px 14px; outline: none;
+  padding: 12px 14px; outline: none;
   font-family: var(--font-ui); font-size: 0.92rem; line-height: 1.6;
+  /* Default min-height fallback */
+  min-height: 180px;
 }
 
-/* Summary editor — taller, fills available space */
-#rte-summary { min-height: calc(35vh); }
+/* Summary — takes ~2/3 of available vertical space */
+#rte-summary  { min-height: clamp(180px, 38vh, 600px); }
 
-/* Follow-up editor — shorter */
-#rte-followup { min-height: calc(15vh); }
+/* Follow-up — takes ~1/3 (half of summary) */
+#rte-followup { min-height: clamp(100px, 18vh, 300px); }
 .rte-editor img             { max-width: 100%; cursor: move; border: 2px solid transparent; border-radius: 3px; transition: border-color 0.15s; display: inline-block; margin: 2px; }
 .rte-editor img.selected    { border-color: var(--cyan); }
 .rte-hint { font-size: 0.73rem; color: var(--text-dim); margin-top: 5px; text-align: right; }
@@ -674,6 +692,12 @@ body::before {
   /* Hub hero smaller */
   .hub-hero h1 { font-size: 1.8rem; }
   .hub-main    { padding: 32px 16px 60px; }
+}
+
+/* RTE on tablet */
+@media (max-width: 768px) {
+  #rte-summary  { min-height: clamp(150px, 30vh, 400px); }
+  #rte-followup { min-height: clamp(80px,  12vh, 180px); }
 }
 
 @media (max-width: 480px) {
