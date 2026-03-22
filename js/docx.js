@@ -65,14 +65,33 @@ const DOCX = (() => {
     for (const [token, value] of Object.entries(tokenMap))
       while (replaced.includes(token)) replaced = replaced.split(token).join(_esc(value));
 
+    // If the replaced value contains newlines, build proper Word line breaks
+    // A plain \n inside <w:t> is ignored by Word — must use <w:br/>
+    let finalXml;
+    if (replaced.includes('\n')) {
+      const lines = replaced.split('\n');
+      finalXml = lines.map((line, i) => {
+        const sp = (line.startsWith(' ') || line.endsWith(' ')) ? ' xml:space="preserve"' : '';
+        const br = i < lines.length - 1 ? '<w:r><w:br/></w:r>' : '';
+        return `<w:r><w:t${sp}>${line}</w:t></w:r>${br}`;
+      }).join('');
+    } else {
+      finalXml = null; // use normal single-run replacement below
+    }
+
     let result = paraXml;
     for (let i=tNodes.length-1; i>=0; i--) {
       const node = tNodes[i];
-      const newText = i===0 ? replaced : '';
-      let openTag = node.open;
-      if (newText && /^ | $/.test(newText) && !openTag.includes('space'))
-        openTag = openTag.replace('>', ' xml:space="preserve">');
-      result = result.slice(0,node.index) + openTag+newText+node.close + result.slice(node.index+node.full.length);
+      if (i === 0 && finalXml) {
+        // Replace the entire first run with multi-line XML
+        result = result.slice(0, node.index) + finalXml + result.slice(node.index + node.full.length);
+      } else {
+        const newText = i===0 ? replaced : '';
+        let openTag = node.open;
+        if (newText && /^ | $/.test(newText) && !openTag.includes('space'))
+          openTag = openTag.replace('>', ' xml:space="preserve">');
+        result = result.slice(0,node.index) + openTag+newText+node.close + result.slice(node.index+node.full.length);
+      }
     }
     return result;
   }
