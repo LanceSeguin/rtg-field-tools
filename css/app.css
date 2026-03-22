@@ -354,15 +354,15 @@ body::before {
 .wo-layout {
   display: grid;
   grid-template-columns: 320px 1fr;
-  overflow: hidden;
   height: calc(100vh - 58px);
+  overflow: hidden;
 }
 
 /* ── 11. Calendar Panel (left) ─────────────────────────────────────────────── */
 .cal-panel {
   background: var(--slate); border-right: 1px solid var(--border2);
   display: flex; flex-direction: column;
-  height: 100%;
+  height: calc(100vh - 58px);
   overflow: hidden;
   position: relative;
 }
@@ -401,7 +401,7 @@ body::before {
 .preset-btn.refresh       { margin-left: auto; }
 
 /* ── 12. Event Cards ───────────────────────────────────────────────────────── */
-.events-scroll  { flex: 1; overflow-y: auto; padding: 8px; }
+.events-scroll  { flex: 1; overflow-y: auto; padding: 8px; min-height: 0; }
 .events-empty   { text-align: center; padding: 40px 16px; color: var(--text-dim); font-size: 0.84rem; line-height: 1.7; }
 .events-loading { text-align: center; padding: 20px; color: var(--text-dim); font-size: 0.84rem; }
 
