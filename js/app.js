@@ -77,7 +77,13 @@ const Cal = (() => {
     try {
       const start = _parseDate(startS);
       const end   = _parseDate(endS);
-      _events = await Graph.getEvents(cal.id, start, end, cal._sharedEmail);
+      const _allEvents = await Graph.getEvents(cal.id, start, end, cal._sharedEmail);
+
+      // Filter to only RTG work order events: "Customer - Tech - SLORD######"
+      // Pattern: three sections separated by " - "
+      _events = _allEvents.filter(ev =>
+        /^[^\-]+ - [^\-]+ - [^\-]+/.test((ev.subject || '').trim())
+      );
 
       if (!_events.length) {
         list.innerHTML = '<div class="events-empty">No events found in this date range.</div>';

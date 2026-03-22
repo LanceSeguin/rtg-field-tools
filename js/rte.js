@@ -198,38 +198,38 @@ const RTE = (() => {
     inst.images.push(entry);
 
     // ── Interactions ───────────────────────────────────────────────────
+    // Use a shared flag: when res/del fires, mark it so overlay skips drag
+    let _handledByChild = false;
 
-    // Select on click
-    overlay.addEventListener('mousedown', e => {
-      if (e.target === res) return; // resize handles itself
-      if (e.target === del) return; // delete handles itself
-      e.stopPropagation();
-      e.preventDefault();
+    res.addEventListener('mousedown', e => {
+      _handledByChild = true;
+      e.stopPropagation(); e.preventDefault();
       _select(inst, entry);
-      _drag(e.clientX, e.clientY, entry);
+      _resize(e.clientX, e.clientY, entry);
     });
+    res.addEventListener('touchstart', e => {
+      _handledByChild = true;
+      e.stopPropagation(); e.preventDefault();
+      _select(inst, entry);
+      _resize(e.touches[0].clientX, e.touches[0].clientY, entry);
+    }, { passive: false });
 
-    // Delete
     del.addEventListener('mousedown', e => {
+      _handledByChild = true;
       e.stopPropagation(); e.preventDefault();
       overlay.remove();
       inst.images = inst.images.filter(en => en !== entry);
       inst.selectedImg = null;
     });
 
-    // Resize — ONLY on the res handle div
-    res.addEventListener('mousedown', e => {
+    overlay.addEventListener('mousedown', e => {
+      if (_handledByChild) { _handledByChild = false; return; }
       e.stopPropagation(); e.preventDefault();
-      _resize(e.clientX, e.clientY, entry);
+      _select(inst, entry);
+      _drag(e.clientX, e.clientY, entry);
     });
-    res.addEventListener('touchstart', e => {
-      e.stopPropagation(); e.preventDefault();
-      _resize(e.touches[0].clientX, e.touches[0].clientY, entry);
-    }, { passive: false });
-
-    // Touch drag
     overlay.addEventListener('touchstart', e => {
-      if (e.target === res || e.target === del) return;
+      if (_handledByChild) { _handledByChild = false; return; }
       e.stopPropagation(); e.preventDefault();
       _select(inst, entry);
       _drag(e.touches[0].clientX, e.touches[0].clientY, entry);
