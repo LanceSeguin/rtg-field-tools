@@ -90,7 +90,7 @@ const Cal = (() => {
         const fmt = d => d.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'});
         const ftm = d => d.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'});
         const loc = ev.location?.displayName || '';
-        return `<div class="event-card" id="ec-${i}" onclick="Cal.select(${i})" ondblclick="Cal.useSelected()">
+        return `<div class="event-card" id="ec-${i}" onclick="Cal.select(${i})" ondblclick="Cal.select(${i}); Cal.useSelected();">
           <div class="event-subj">${ev.subject || '(No subject)'}</div>
           <div class="event-when">${fmt(s)} ${ftm(s)} → ${fmt(e)} ${ftm(e)}</div>
           ${loc ? `<div class="event-loc">📍 ${loc}</div>` : ''}

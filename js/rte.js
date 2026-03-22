@@ -187,15 +187,10 @@ const RTE = (() => {
 
     // Create overlay container
     const overlay = document.createElement('div');
-    overlay.style.cssText = `
-      position: absolute;
-      left: ${imgData.x}px;
-      top:  ${imgData.y}px;
-      width: ${imgData.w}px;
-      cursor: move;
-      user-select: none;
-      z-index: 10;
-    `;
+    overlay.style.cssText =
+      `position:absolute;left:${imgData.x}px;top:${imgData.y}px;` +
+      `width:${imgData.w}px;height:200px;` +
+      'cursor:move;user-select:none;z-index:10;overflow:visible;';
 
     // The image itself
     const img = document.createElement('img');
@@ -203,46 +198,29 @@ const RTE = (() => {
     img.style.cssText = 'width:100%;display:block;border:2px solid transparent;box-sizing:border-box;';
     img.draggable = false;  // prevent browser native drag
 
-    // Set height once loaded
+    // Set height once loaded — also update overlay dimensions
     img.onload = () => {
-      const ar = img.naturalHeight / img.naturalWidth;
+      const ar = img.naturalHeight / Math.max(img.naturalWidth, 1);
       imgData.h = Math.round(imgData.w * ar);
       overlay.style.height = imgData.h + 'px';
+      overlay.style.width  = imgData.w + 'px';
     };
 
     // Resize handle (bottom-right corner)
     const handle = document.createElement('div');
-    handle.style.cssText = `
-      position: absolute;
-      right: -6px; bottom: -6px;
-      width: 14px; height: 14px;
-      background: #00b8d9;
-      border: 2px solid #fff;
-      border-radius: 50%;
-      cursor: se-resize;
-      display: none;
-      z-index: 11;
-    `;
+    handle.style.cssText =
+      'position:absolute;right:-7px;bottom:-7px;width:16px;height:16px;' +
+      'background:#00b8d9;border:2px solid #fff;border-radius:50%;' +
+      'cursor:se-resize;display:none;z-index:11;box-shadow:0 1px 4px rgba(0,0,0,0.4);';
 
     // Delete button (top-right)
     const delBtn = document.createElement('div');
     delBtn.innerHTML = '✕';
-    delBtn.style.cssText = `
-      position: absolute;
-      right: -8px; top: -8px;
-      width: 18px; height: 18px;
-      background: #e53e3e;
-      color: #fff;
-      border-radius: 50%;
-      font-size: 10px;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 12;
-      line-height: 18px;
-      text-align: center;
-    `;
+    delBtn.style.cssText =
+      'position:absolute;right:-8px;top:-8px;width:18px;height:18px;' +
+      'background:#e53e3e;color:#fff;border-radius:50%;font-size:10px;' +
+      'display:none;align-items:center;justify-content:center;cursor:pointer;' +
+      'z-index:12;line-height:18px;text-align:center;';
 
     overlay.appendChild(img);
     overlay.appendChild(handle);
@@ -331,13 +309,17 @@ const RTE = (() => {
   function _startResize(e, inst, entry) {
     e.preventDefault();
     const startX  = e.clientX;
+    const startY  = e.clientY;
     const startW  = entry.imgData.w;
     const startH  = entry.imgData.h || entry.overlay.offsetHeight;
     const ar      = startH / Math.max(startW, 1);
 
     const onMove = ev => {
       const dx   = ev.clientX - startX;
-      const newW = Math.max(60, startW + dx);
+      const dy   = ev.clientY - startY;
+      // Allow resize by width (drag right) or height (drag down), take the larger delta
+      const delta = Math.abs(dx) >= Math.abs(dy) ? dx : dy / ar;
+      const newW = Math.max(60, startW + delta);
       const newH = Math.round(newW * ar);
       entry.imgData.w = newW;
       entry.imgData.h = newH;
