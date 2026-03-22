@@ -1,11 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // docx.js — Fills Work_Order_Master_Template.docx in the browser
 //
-// KEY PROBLEM SOLVED: Word splits tokens across multiple <w:r><w:t> runs
-// when you edit a document (e.g. {{PON</w:t>...<w:t>umber}}). A naive
-// string replace misses these. We fix this by stitching all <w:t> text
-// nodes within each <w:p> paragraph together, doing the replacement on the
-// combined string, then writing back — exactly what tokens.py did in Python.
+// Uses ziplib.js (local, no CDN) to read/write the .docx ZIP format.
+// Tokens split across XML runs are stitched at the paragraph level.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DOCX = (() => {
@@ -16,12 +13,12 @@ const DOCX = (() => {
   async function _fetchTemplate() {
     const r = await fetch(TEMPLATE_URL + '?v=' + Date.now());
     if (!r.ok) throw new Error(
-      `Template fetch failed: ${r.status}. Make sure Work_Order_Master_Template.docx is in the root of your GitHub repo.`
+      `Template fetch failed: ${r.status}. Make sure Work_Order_Master_Template.docx is in your GitHub repo root.`
     );
     return r.arrayBuffer();
   }
 
-  // ── XML helpers ───────────────────────────────────────────────────────────
+  // ── XML escape ────────────────────────────────────────────────────────────
   function _esc(s) {
     return String(s || '')
       .replace(/&/g, '&amp;')
@@ -48,49 +45,40 @@ const DOCX = (() => {
       .trim();
   }
 
-  // ── CORE FIX: stitch split runs then replace token in a paragraph ─────────
-  // Word splits tokens across <w:r> runs when the document is edited.
-  // e.g. {{PON</w:t></w:r>...<w:r><w:t>umber}} appears as two separate runs.
-  // We collect ALL <w:t> text in the paragraph, do the replace on the joined
-  // string, then put the result back into the FIRST <w:t> and blank the rest.
+  // ── Paragraph-level token replacement ────────────────────────────────────
+  // Word splits tokens across <w:r> runs — stitch all <w:t> text in each
+  // paragraph together, replace tokens, write back to first node.
   function _replaceParagraphTokens(paraXml, tokenMap) {
-    // Extract all <w:t> nodes and their text
-    const tNodes = [];
     const tRegex = /(<w:t[^>]*>)([\s\S]*?)(<\/w:t>)/g;
+    const tNodes = [];
     let m;
     while ((m = tRegex.exec(paraXml)) !== null) {
       tNodes.push({ full: m[0], open: m[1], text: m[2], close: m[3], index: m.index });
     }
     if (!tNodes.length) return paraXml;
 
-    // Join all text to find tokens that span runs
     const combined = tNodes.map(n => n.text).join('');
-
-    // Check if any token exists in combined text
     let hasToken = false;
     for (const token of Object.keys(tokenMap)) {
       if (combined.includes(token)) { hasToken = true; break; }
     }
     if (!hasToken) return paraXml;
 
-    // Replace all tokens in combined text
     let replaced = combined;
     for (const [token, value] of Object.entries(tokenMap)) {
-      // Use split/join for reliable replacement (no regex special char issues)
       while (replaced.includes(token)) {
         replaced = replaced.split(token).join(_esc(value));
       }
     }
 
-    // Write replaced text into first <w:t>, blank out the rest
+    // Write result into first <w:t>, blank the rest — iterate in reverse
+    // so string indices stay valid
     let result = paraXml;
-    // Replace each original <w:t> node — first gets full value, rest get empty
     for (let i = tNodes.length - 1; i >= 0; i--) {
-      const node  = tNodes[i];
+      const node    = tNodes[i];
       const newText = i === 0 ? replaced : '';
-      // Preserve xml:space="preserve" if present, otherwise add it for safety
-      let openTag = node.open;
-      if (newText.match(/^ | $/) && !openTag.includes('space')) {
+      let openTag   = node.open;
+      if (newText && /^ | $/.test(newText) && !openTag.includes('space')) {
         openTag = openTag.replace('>', ' xml:space="preserve">');
       }
       const newNode = openTag + newText + node.close;
@@ -99,9 +87,7 @@ const DOCX = (() => {
     return result;
   }
 
-  // ── Apply token replacement across entire XML ─────────────────────────────
   function _replaceAllTokens(xml, tokenMap) {
-    // Process paragraph by paragraph
     return xml.replace(/(<w:p[ >][\s\S]*?<\/w:p>)/g, para =>
       _replaceParagraphTokens(para, tokenMap)
     );
@@ -118,56 +104,39 @@ const DOCX = (() => {
     if (before === -1) return null;
     const after = xml.indexOf('</w:tr>', pos);
     if (after === -1) return null;
-    return {
-      rowXml: xml.slice(before, after + 7),
-      start:  before,
-      end:    after + 7,
-    };
+    return { rowXml: xml.slice(before, after + 7), start: before, end: after + 7 };
   }
 
-  // ── Expand a repeating table section ─────────────────────────────────────
-  function _expandRows(xml, tokenKey, rows, tokenMapFn) {
+  // ── Expand repeating rows ─────────────────────────────────────────────────
+  function _expandRows(xml, tokenKey, rows, tokenMapFn, emptyTokens) {
     const tmpl = _findTemplateRow(xml, tokenKey);
     if (!tmpl) return xml;
 
-    let newRows = '';
+    let newRows;
     if (rows && rows.length) {
-      newRows = rows.map(r => {
-        // Replace tokens in the template row for this data row
-        return _replaceAllTokens(tmpl.rowXml, tokenMapFn(r));
-      }).join('');
-    }
-    // If no rows, leave one empty row so the table doesn't break
-    if (!newRows) {
-      newRows = _replaceAllTokens(tmpl.rowXml,
-        Object.fromEntries(
-          ['L.Date','L.DOW','L.Std.Reg','L.Std.OT','L.Std.Hol',
-           'L.Next.Reg','L.Next.OT','L.Next.Hol',
-           'L.Second.Reg','L.Second.OT','L.Second.Hol','L.Notes',
-           'P.Num','P.Desc','P.Serials','P.Qty']
-          .map(t => [`{{${t}}}`, ''])
-        )
-      );
+      newRows = rows.map(r => _replaceAllTokens(tmpl.rowXml, tokenMapFn(r))).join('');
+    } else {
+      // No data — leave one blank row
+      const emptyMap = {};
+      emptyTokens.forEach(t => { emptyMap[`{{${t}}}`] = ''; });
+      newRows = _replaceAllTokens(tmpl.rowXml, emptyMap);
     }
     return xml.slice(0, tmpl.start) + newRows + xml.slice(tmpl.end);
   }
 
-  // ── Main: fetch → fill → download ────────────────────────────────────────
+  // ── Main ──────────────────────────────────────────────────────────────────
   async function download(formData, filename) {
-    if (typeof PizZip === 'undefined') {
-      throw new Error('PizZip not loaded — check index.html script tags');
-    }
 
     // 1. Fetch template
     const buf = await _fetchTemplate();
 
-    // 2. Unzip
-    const zip = new PizZip(buf);
-    const docFile = zip.file('word/document.xml');
-    if (!docFile) throw new Error('Template is missing word/document.xml');
-    let xml = docFile.asText();
+    // 2. Parse ZIP
+    const zipFiles = await ZipLib.readZip(buf);
 
-    // 3. Build flat token map
+    // 3. Get document.xml
+    let xml = await ZipLib.getFileText(zipFiles, 'word/document.xml');
+
+    // 4. Flat token map
     const tokenMap = {
       '{{CustomerName}}':       formData.customerName   || '',
       '{{PONumber}}':           formData.poNumber       || '',
@@ -183,47 +152,58 @@ const DOCX = (() => {
       '{{Scope}}':              formData.scope          || '',
       '{{Summary}}':            _rteText('rte-summary'),
       '{{FollowUp}}':           _rteText('rte-followup'),
-      // Legacy lowercase aliases
       '{{customer_name}}':      formData.customerName   || '',
       '{{systemserial}}':       formData.systemSerial   || '',
     };
 
-    // 4. Replace all flat tokens (handles split runs)
+    // 5. Replace flat tokens
     xml = _replaceAllTokens(xml, tokenMap);
 
-    // 5. Expand labor rows
+    // 6. Expand labor rows
+    const laborTokens = ['L.Date','L.DOW','L.Std.Reg','L.Std.OT','L.Std.Hol',
+      'L.Next.Reg','L.Next.OT','L.Next.Hol','L.Second.Reg','L.Second.OT','L.Second.Hol','L.Notes'];
     xml = _expandRows(xml, 'L.Date', formData.laborRows || [], r => ({
-      '{{L.Date}}':        r.date    || '',
-      '{{L.DOW}}':         r.dow     || '',
-      '{{L.Std.Reg}}':     r.std_reg || '',
-      '{{L.Std.OT}}':      r.std_ot  || '',
-      '{{L.Std.Hol}}':     r.std_hol || '',
-      '{{L.Next.Reg}}':    r.nxt_reg || '',
-      '{{L.Next.OT}}':     r.nxt_ot  || '',
-      '{{L.Next.Hol}}':    r.nxt_hol || '',
-      '{{L.Second.Reg}}':  r.sec_reg || '',
-      '{{L.Second.OT}}':   r.sec_ot  || '',
-      '{{L.Second.Hol}}':  r.sec_hol || '',
-      '{{L.Notes}}':       r.notes   || '',
-    }));
+      '{{L.Date}}':       r.date    || '',
+      '{{L.DOW}}':        r.dow     || '',
+      '{{L.Std.Reg}}':    r.std_reg || '',
+      '{{L.Std.OT}}':     r.std_ot  || '',
+      '{{L.Std.Hol}}':    r.std_hol || '',
+      '{{L.Next.Reg}}':   r.nxt_reg || '',
+      '{{L.Next.OT}}':    r.nxt_ot  || '',
+      '{{L.Next.Hol}}':   r.nxt_hol || '',
+      '{{L.Second.Reg}}': r.sec_reg || '',
+      '{{L.Second.OT}}':  r.sec_ot  || '',
+      '{{L.Second.Hol}}': r.sec_hol || '',
+      '{{L.Notes}}':      r.notes   || '',
+    }), laborTokens);
 
-    // 6. Expand parts rows
+    // 7. Expand parts rows
+    const partsTokens = ['P.Num','P.Desc','P.Serials','P.Qty'];
     xml = _expandRows(xml, 'P.Num', formData.partsRows || [], r => ({
       '{{P.Num}}':     r.num          || '',
       '{{P.Desc}}':    r.desc         || '',
       '{{P.Serials}}': r.ser          || '',
       '{{P.Qty}}':     String(r.qty || ''),
-    }));
+    }), partsTokens);
 
-    // 7. Write back and generate
-    zip.file('word/document.xml', xml);
-    const blob = zip.generate({
-      type:        'blob',
-      mimeType:    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      compression: 'DEFLATE',
+    // 8. Rebuild ALL zip files with modified document.xml
+    const outFiles = {};
+    for (const [name, entry] of Object.entries(zipFiles)) {
+      if (name === 'word/document.xml') {
+        outFiles[name] = xml;  // use our modified version
+      } else {
+        // Re-use original compressed data as-is by decompressing then rewriting
+        outFiles[name] = await ZipLib.getFileAsBytes(zipFiles, name);
+      }
+    }
+
+    // 9. Write new ZIP
+    const bytes = await ZipLib.writeZip(outFiles);
+
+    // 10. Download
+    const blob = new Blob([bytes], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     });
-
-    // 8. Download
     const url = URL.createObjectURL(blob);
     const a   = Object.assign(document.createElement('a'), { href: url, download: filename });
     document.body.appendChild(a);
