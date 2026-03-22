@@ -355,13 +355,20 @@ body::before {
   display: grid;
   grid-template-columns: 320px 1fr;
   flex: 1; overflow: hidden;
+  min-height: 0;              /* allows flex child to shrink below content size */
   height: calc(100vh - 58px);
+}
+
+/* ── Calendar panel must be capped to grid row height so events list scrolls ── */
+.cal-panel {
+  min-height: 0;   /* critical — allows flex children to shrink */
 }
 
 /* ── 11. Calendar Panel (left) ─────────────────────────────────────────────── */
 .cal-panel {
   background: var(--slate); border-right: 1px solid var(--border2);
   display: flex; flex-direction: column; overflow: hidden;
+  min-height: 0;
 }
 .cal-section      { padding: 14px 16px; border-bottom: 1px solid var(--border); }
 .cal-section-title {
