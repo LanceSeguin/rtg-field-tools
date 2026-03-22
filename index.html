@@ -367,6 +367,15 @@
         </button>
 
         <div class="sec-head">🔩 Parts</div>
+
+        <!-- Catalog picker — populated from parts_catalog.csv -->
+        <div class="f-group" style="margin-bottom:12px;">
+          <label class="f-label">Select from Parts Catalog</label>
+          <select id="pt-catalog" class="f-select" onchange="Parts.onCatalogSelect()">
+            <option value="">— Select from catalog —</option>
+          </select>
+        </div>
+
         <div class="parts-add-row">
           <div class="f-group">
             <label class="f-label">Part #</label>
