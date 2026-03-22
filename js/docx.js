@@ -1,16 +1,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // docx.js — Fills Work_Order_Master_Template.docx in the browser
 //
-// Strategy:
-//   1. Fetch the template .docx from GitHub Pages
-//   2. Unzip it with PizZip
-//   3. Replace flat tokens ({{CustomerName}} etc.) with form values
-//   4. For labor rows: find the template row containing {{L.Date}},
-//      clone it once per labor entry, replace tokens, remove template row
-//   5. Same for parts rows with {{P.Num}}
-//   6. Re-zip and download
-//
-// This mirrors exactly what the original Python tokens.py + doc_table.py did.
+// KEY PROBLEM SOLVED: Word splits tokens across multiple <w:r><w:t> runs
+// when you edit a document (e.g. {{PON</w:t>...<w:t>umber}}). A naive
+// string replace misses these. We fix this by stitching all <w:t> text
+// nodes within each <w:p> paragraph together, doing the replacement on the
+// combined string, then writing back — exactly what tokens.py did in Python.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DOCX = (() => {
@@ -20,11 +15,13 @@ const DOCX = (() => {
   // ── Fetch template ────────────────────────────────────────────────────────
   async function _fetchTemplate() {
     const r = await fetch(TEMPLATE_URL + '?v=' + Date.now());
-    if (!r.ok) throw new Error(`Template fetch failed: ${r.status} — make sure Work_Order_Master_Template.docx is in your GitHub repo root`);
+    if (!r.ok) throw new Error(
+      `Template fetch failed: ${r.status}. Make sure Work_Order_Master_Template.docx is in the root of your GitHub repo.`
+    );
     return r.arrayBuffer();
   }
 
-  // ── XML escape ────────────────────────────────────────────────────────────
+  // ── XML helpers ───────────────────────────────────────────────────────────
   function _esc(s) {
     return String(s || '')
       .replace(/&/g, '&amp;')
@@ -41,7 +38,7 @@ const DOCX = (() => {
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<\/p>/gi, '\n')
       .replace(/<\/div>/gi, '\n')
-      .replace(/<img[^>]*>/gi, '[image]')
+      .replace(/<img[^>]*>/gi, '')
       .replace(/<[^>]+>/g, '')
       .replace(/&nbsp;/g, ' ')
       .replace(/&amp;/g, '&')
@@ -51,137 +48,114 @@ const DOCX = (() => {
       .trim();
   }
 
-  // ── Replace a flat token throughout XML ───────────────────────────────────
-  // Tokens can be split across multiple <w:r><w:t> runs by Word.
-  // We first stitch all text nodes in each paragraph together, do the
-  // replacement on the combined string, then write back to the first run.
-  function _replaceToken(xml, token, value) {
-    const escaped = _esc(value);
-    // Simple case: token appears intact in a single <w:t> node
-    const simple = xml.split(`{{${token}}}`).join(escaped);
-    if (simple !== xml) return simple;
-    // Regex to catch token split by XML attributes/namespace noise
-    const inner = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                       .replace(/\s+/g, '[\\s\\S]{0,50}');
-    const rx = new RegExp(`\\{\\{[\\s]*${inner}[\\s]*\\}\\}`, 'g');
-    return xml.replace(rx, escaped);
-  }
-
-  // ── Replace all flat tokens in XML ───────────────────────────────────────
-  function _replaceFlatTokens(xml, data) {
-    const flat = {
-      'CustomerName':       data.customerName,
-      'PONumber':           data.poNumber,
-      'ServiceAgency':      data.serviceAgency,
-      'ServiceTechnician':  data.techName,
-      'ServiceAgencyOrder': data.serviceOrder,
-      'ProductLine':        data.productLine,
-      'SystemSerial':       data.systemSerial,
-      'ServiceAddress':     data.serviceAddress,
-      'ContactName':        data.contactName,
-      'ContactNumber':      data.contactPhone,
-      'ContactEmail':       data.contactEmail,
-      'Scope':              data.scope,
-      'Summary':            data.summary,
-      'FollowUp':           data.followUp,
-      // Legacy lowercase variants
-      'customer_name':      data.customerName,
-      'systemserial':       data.systemSerial,
-    };
-    let out = xml;
-    for (const [token, value] of Object.entries(flat)) {
-      out = _replaceToken(out, token, value || '');
+  // ── CORE FIX: stitch split runs then replace token in a paragraph ─────────
+  // Word splits tokens across <w:r> runs when the document is edited.
+  // e.g. {{PON</w:t></w:r>...<w:r><w:t>umber}} appears as two separate runs.
+  // We collect ALL <w:t> text in the paragraph, do the replace on the joined
+  // string, then put the result back into the FIRST <w:t> and blank the rest.
+  function _replaceParagraphTokens(paraXml, tokenMap) {
+    // Extract all <w:t> nodes and their text
+    const tNodes = [];
+    const tRegex = /(<w:t[^>]*>)([\s\S]*?)(<\/w:t>)/g;
+    let m;
+    while ((m = tRegex.exec(paraXml)) !== null) {
+      tNodes.push({ full: m[0], open: m[1], text: m[2], close: m[3], index: m.index });
     }
-    return out;
-  }
+    if (!tNodes.length) return paraXml;
 
-  // ── Find a table row (<w:tr>...</w:tr>) containing a given token ──────────
-  function _findTemplateRow(xml, token) {
-    const start = xml.indexOf(`{{${token}}}`);
-    if (start === -1) return null;
-    // Walk backwards to find opening <w:tr>
-    const before  = xml.lastIndexOf('<w:tr ', start);
-    const before2 = xml.lastIndexOf('<w:tr>', start);
-    const rowStart = Math.max(before, before2);
-    if (rowStart === -1) return null;
-    // Walk forwards to find matching </w:tr>
-    const rowEnd = xml.indexOf('</w:tr>', start);
-    if (rowEnd === -1) return null;
-    return {
-      rowXml: xml.slice(rowStart, rowEnd + '</w:tr>'.length),
-      start:  rowStart,
-      end:    rowEnd + '</w:tr>'.length,
-    };
-  }
+    // Join all text to find tokens that span runs
+    const combined = tNodes.map(n => n.text).join('');
 
-  // ── Expand labor rows ─────────────────────────────────────────────────────
-  function _expandLaborRows(xml, laborRows) {
-    const tmpl = _findTemplateRow(xml, 'L.Date');
-    if (!tmpl) return xml;  // no template row found — leave as-is
-
-    if (!laborRows || !laborRows.length) {
-      // No labor data — replace template row with an empty row
-      const emptyRow = tmpl.rowXml
-        .replace(/\{\{L\.[^}]+\}\}/g, '');
-      return xml.slice(0, tmpl.start) + emptyRow + xml.slice(tmpl.end);
+    // Check if any token exists in combined text
+    let hasToken = false;
+    for (const token of Object.keys(tokenMap)) {
+      if (combined.includes(token)) { hasToken = true; break; }
     }
+    if (!hasToken) return paraXml;
 
-    const newRows = laborRows.map(r => {
-      let row = tmpl.rowXml;
-      const map = {
-        'L.Date':        r.date       || '',
-        'L.DOW':         r.dow        || '',
-        'L.Std.Reg':     r.std_reg    || '',
-        'L.Std.OT':      r.std_ot     || '',
-        'L.Std.Hol':     r.std_hol    || '',
-        'L.Next.Reg':    r.nxt_reg    || '',
-        'L.Next.OT':     r.nxt_ot     || '',
-        'L.Next.Hol':    r.nxt_hol    || '',
-        'L.Second.Reg':  r.sec_reg    || '',
-        'L.Second.OT':   r.sec_ot     || '',
-        'L.Second.Hol':  r.sec_hol    || '',
-        'L.Notes':       r.notes      || '',
-      };
-      for (const [token, value] of Object.entries(map)) {
-        row = row.split(`{{${token}}}`).join(_esc(value));
+    // Replace all tokens in combined text
+    let replaced = combined;
+    for (const [token, value] of Object.entries(tokenMap)) {
+      // Use split/join for reliable replacement (no regex special char issues)
+      while (replaced.includes(token)) {
+        replaced = replaced.split(token).join(_esc(value));
       }
-      return row;
-    }).join('');
+    }
 
-    return xml.slice(0, tmpl.start) + newRows + xml.slice(tmpl.end);
+    // Write replaced text into first <w:t>, blank out the rest
+    let result = paraXml;
+    // Replace each original <w:t> node — first gets full value, rest get empty
+    for (let i = tNodes.length - 1; i >= 0; i--) {
+      const node  = tNodes[i];
+      const newText = i === 0 ? replaced : '';
+      // Preserve xml:space="preserve" if present, otherwise add it for safety
+      let openTag = node.open;
+      if (newText.match(/^ | $/) && !openTag.includes('space')) {
+        openTag = openTag.replace('>', ' xml:space="preserve">');
+      }
+      const newNode = openTag + newText + node.close;
+      result = result.slice(0, node.index) + newNode + result.slice(node.index + node.full.length);
+    }
+    return result;
   }
 
-  // ── Expand parts rows ─────────────────────────────────────────────────────
-  function _expandPartsRows(xml, partsRows) {
-    const tmpl = _findTemplateRow(xml, 'P.Num');
+  // ── Apply token replacement across entire XML ─────────────────────────────
+  function _replaceAllTokens(xml, tokenMap) {
+    // Process paragraph by paragraph
+    return xml.replace(/(<w:p[ >][\s\S]*?<\/w:p>)/g, para =>
+      _replaceParagraphTokens(para, tokenMap)
+    );
+  }
+
+  // ── Find template row containing a token ─────────────────────────────────
+  function _findTemplateRow(xml, token) {
+    const pos = xml.indexOf(`{{${token}}}`);
+    if (pos === -1) return null;
+    const before = Math.max(
+      xml.lastIndexOf('<w:tr ', pos),
+      xml.lastIndexOf('<w:tr>', pos)
+    );
+    if (before === -1) return null;
+    const after = xml.indexOf('</w:tr>', pos);
+    if (after === -1) return null;
+    return {
+      rowXml: xml.slice(before, after + 7),
+      start:  before,
+      end:    after + 7,
+    };
+  }
+
+  // ── Expand a repeating table section ─────────────────────────────────────
+  function _expandRows(xml, tokenKey, rows, tokenMapFn) {
+    const tmpl = _findTemplateRow(xml, tokenKey);
     if (!tmpl) return xml;
 
-    if (!partsRows || !partsRows.length) {
-      const emptyRow = tmpl.rowXml.replace(/\{\{P\.[^}]+\}\}/g, '');
-      return xml.slice(0, tmpl.start) + emptyRow + xml.slice(tmpl.end);
+    let newRows = '';
+    if (rows && rows.length) {
+      newRows = rows.map(r => {
+        // Replace tokens in the template row for this data row
+        return _replaceAllTokens(tmpl.rowXml, tokenMapFn(r));
+      }).join('');
     }
-
-    const newRows = partsRows.map(r => {
-      let row = tmpl.rowXml;
-      const map = {
-        'P.Num':     r.num  || '',
-        'P.Desc':    r.desc || '',
-        'P.Serials': r.ser  || '',
-        'P.Qty':     String(r.qty || ''),
-      };
-      for (const [token, value] of Object.entries(map)) {
-        row = row.split(`{{${token}}}`).join(_esc(value));
-      }
-      return row;
-    }).join('');
-
+    // If no rows, leave one empty row so the table doesn't break
+    if (!newRows) {
+      newRows = _replaceAllTokens(tmpl.rowXml,
+        Object.fromEntries(
+          ['L.Date','L.DOW','L.Std.Reg','L.Std.OT','L.Std.Hol',
+           'L.Next.Reg','L.Next.OT','L.Next.Hol',
+           'L.Second.Reg','L.Second.OT','L.Second.Hol','L.Notes',
+           'P.Num','P.Desc','P.Serials','P.Qty']
+          .map(t => [`{{${t}}}`, ''])
+        )
+      );
+    }
     return xml.slice(0, tmpl.start) + newRows + xml.slice(tmpl.end);
   }
 
-  // ── Main: fetch, fill, download ───────────────────────────────────────────
+  // ── Main: fetch → fill → download ────────────────────────────────────────
   async function download(formData, filename) {
     if (typeof PizZip === 'undefined') {
-      throw new Error('PizZip not loaded — check that CDN scripts are in index.html');
+      throw new Error('PizZip not loaded — check index.html script tags');
     }
 
     // 1. Fetch template
@@ -189,54 +163,69 @@ const DOCX = (() => {
 
     // 2. Unzip
     const zip = new PizZip(buf);
-
-    // 3. Get document.xml
     const docFile = zip.file('word/document.xml');
-    if (!docFile) throw new Error('word/document.xml not found in template');
+    if (!docFile) throw new Error('Template is missing word/document.xml');
     let xml = docFile.asText();
 
-    // 4. Build data object
-    const data = {
-      customerName:   formData.customerName   || '',
-      poNumber:       formData.poNumber       || '',
-      serviceAgency:  formData.serviceAgency  || '',
-      techName:       formData.techName       || '',
-      serviceOrder:   formData.serviceOrder   || '',
-      productLine:    formData.productLine    || '',
-      systemSerial:   formData.systemSerial   || '',
-      serviceAddress: formData.serviceAddress || '',
-      contactName:    formData.contactName    || '',
-      contactPhone:   formData.contactPhone   || '',
-      contactEmail:   formData.contactEmail   || '',
-      scope:          formData.scope          || '',
-      summary:        _rteText('rte-summary'),
-      followUp:       _rteText('rte-followup'),
+    // 3. Build flat token map
+    const tokenMap = {
+      '{{CustomerName}}':       formData.customerName   || '',
+      '{{PONumber}}':           formData.poNumber       || '',
+      '{{ServiceAgency}}':      formData.serviceAgency  || '',
+      '{{ServiceTechnician}}':  formData.techName       || '',
+      '{{ServiceAgencyOrder}}': formData.serviceOrder   || '',
+      '{{ProductLine}}':        formData.productLine    || '',
+      '{{SystemSerial}}':       formData.systemSerial   || '',
+      '{{ServiceAddress}}':     formData.serviceAddress || '',
+      '{{ContactName}}':        formData.contactName    || '',
+      '{{ContactNumber}}':      formData.contactPhone   || '',
+      '{{ContactEmail}}':       formData.contactEmail   || '',
+      '{{Scope}}':              formData.scope          || '',
+      '{{Summary}}':            _rteText('rte-summary'),
+      '{{FollowUp}}':           _rteText('rte-followup'),
+      // Legacy lowercase aliases
+      '{{customer_name}}':      formData.customerName   || '',
+      '{{systemserial}}':       formData.systemSerial   || '',
     };
 
-    // 5. Replace flat tokens
-    xml = _replaceFlatTokens(xml, data);
+    // 4. Replace all flat tokens (handles split runs)
+    xml = _replaceAllTokens(xml, tokenMap);
 
-    // 6. Expand labor rows
-    xml = _expandLaborRows(xml, formData.laborRows || []);
+    // 5. Expand labor rows
+    xml = _expandRows(xml, 'L.Date', formData.laborRows || [], r => ({
+      '{{L.Date}}':        r.date    || '',
+      '{{L.DOW}}':         r.dow     || '',
+      '{{L.Std.Reg}}':     r.std_reg || '',
+      '{{L.Std.OT}}':      r.std_ot  || '',
+      '{{L.Std.Hol}}':     r.std_hol || '',
+      '{{L.Next.Reg}}':    r.nxt_reg || '',
+      '{{L.Next.OT}}':     r.nxt_ot  || '',
+      '{{L.Next.Hol}}':    r.nxt_hol || '',
+      '{{L.Second.Reg}}':  r.sec_reg || '',
+      '{{L.Second.OT}}':   r.sec_ot  || '',
+      '{{L.Second.Hol}}':  r.sec_hol || '',
+      '{{L.Notes}}':       r.notes   || '',
+    }));
 
-    // 7. Expand parts rows
-    xml = _expandPartsRows(xml, formData.partsRows || []);
+    // 6. Expand parts rows
+    xml = _expandRows(xml, 'P.Num', formData.partsRows || [], r => ({
+      '{{P.Num}}':     r.num          || '',
+      '{{P.Desc}}':    r.desc         || '',
+      '{{P.Serials}}': r.ser          || '',
+      '{{P.Qty}}':     String(r.qty || ''),
+    }));
 
-    // 8. Write back
+    // 7. Write back and generate
     zip.file('word/document.xml', xml);
-
-    // 9. Generate and download
     const blob = zip.generate({
       type:        'blob',
       mimeType:    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       compression: 'DEFLATE',
     });
 
+    // 8. Download
     const url = URL.createObjectURL(blob);
-    const a   = Object.assign(document.createElement('a'), {
-      href:     url,
-      download: filename,
-    });
+    const a   = Object.assign(document.createElement('a'), { href: url, download: filename });
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
