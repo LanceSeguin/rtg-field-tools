@@ -602,3 +602,94 @@ body::before {
 @keyframes fadeUp  { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
 @keyframes slideIn { from { opacity:0; transform:translateY(10px);  } to { opacity:1; transform:translateY(0); } }
 @keyframes spin    { to   { transform:rotate(360deg); } }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE / MOBILE LAYOUT
+   Below 768px the side-by-side layout stacks vertically.
+   Below 480px further simplifications for phone screens.
+════════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* Stack work order layout vertically */
+  .wo-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  /* Calendar panel takes natural height, no fixed constraint */
+  .cal-panel {
+    height: auto;
+    max-height: 50vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border2);
+  }
+
+  /* Events list scrolls within its container */
+  .events-scroll {
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  /* Use button full width */
+  .use-btn { width: 100%; margin: 6px 0 0; border-radius: 0; }
+
+  /* Form panel takes remaining space */
+  .form-panel { min-height: 60vh; }
+
+  /* Tab bar scrolls horizontally on small screens */
+  .tab-bar { overflow-x: auto; padding: 0 8px; }
+  .tab-btn  { padding: 10px 12px; font-size: 0.8rem; white-space: nowrap; }
+
+  /* Form grid goes single column */
+  .form-grid { grid-template-columns: 1fr; }
+  .span2     { grid-column: span 1; }
+
+  /* Parts add row stacks */
+  .parts-add-row { grid-template-columns: 1fr 1fr; }
+
+  /* Hub cards stack */
+  .tools-grid { grid-template-columns: 1fr; }
+
+  /* Header compact */
+  .hdr-inner  { padding: 10px 14px; }
+  .hdr-title  { font-size: 1rem; }
+  .brand-badge { display: none; }
+  .hdr-user   { display: none; }
+
+  /* Login card full width */
+  .login-card { width: 100%; margin: 16px; padding: 32px 24px; }
+
+  /* Hub hero smaller */
+  .hub-hero h1 { font-size: 1.8rem; }
+  .hub-main    { padding: 32px 16px 60px; }
+}
+
+@media (max-width: 480px) {
+
+  .wo-layout { grid-template-rows: auto 1fr; }
+
+  .cal-section { padding: 10px 12px; }
+  .cal-select  { margin-bottom: 8px; }
+
+  .date-grid   { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .preset-row  { gap: 4px; }
+  .preset-btn  { font-size: 0.68rem; padding: 3px 7px; }
+
+  .tab-pane    { padding: 16px; }
+
+  /* Labor table scrolls horizontally */
+  .labor-tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  .parts-add-row { grid-template-columns: 1fr; }
+
+  .btn-generate { width: 100%; justify-content: center; }
+
+  .hdr-btn { padding: 5px 10px; font-size: 0.75rem; }
+
+  /* RTE toolbar wraps */
+  .rte-toolbar { gap: 1px; }
+  .rte-btn     { padding: 3px 5px; font-size: 0.78rem; }
+}
