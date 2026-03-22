@@ -45,7 +45,45 @@ const DOCX = (() => {
       .trim();
   }
 
-  // ── Paragraph-level token replacement ────────────────────────────────────
+  // ── Convert base64 image to Word inline picture XML ───────────────────────
+  function _makeImageXml(wEmu, hEmu, rId) {
+    return `<w:p><w:r><w:drawing>
+      <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">
+        <wp:extent cx="${wEmu}" cy="${hEmu}"/>
+        <wp:docPr id="1" name="img"/>
+        <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+            <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+              <pic:blipFill>
+                <a:blip r:embed="${rId}"
+                  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
+                <a:stretch><a:fillRect/></a:stretch>
+              </pic:blipFill>
+              <pic:spPr>
+                <a:xfrm><a:off x="0" y="0"/><a:ext cx="${wEmu}" cy="${hEmu}"/></a:xfrm>
+                <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+              </pic:spPr>
+            </pic:pic>
+          </a:graphicData>
+        </a:graphic>
+      </wp:inline>
+    </w:drawing></w:r></w:p>`;
+  }
+
+  function _dataUrlToBytes(dataUrl) {
+    const b64 = dataUrl.split(',')[1];
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function _mimeExt(dataUrl) {
+    const m = dataUrl.match(/data:image\/(\w+)/);
+    return (m ? m[1] : 'png').replace('jpeg','jpg');
+  }
+
+  // ── Paragraph-level token replacement  // ── Paragraph-level token replacement ────────────────────────────────────
   // Word splits tokens across <w:r> runs — stitch all <w:t> text in each
   // paragraph together, replace tokens, write back to first node.
   function _replaceParagraphTokens(paraXml, tokenMap) {
@@ -228,18 +266,76 @@ const DOCX = (() => {
       '{{P.Qty}}':     String(r.qty || ''),
     }), partsTokens);
 
-    // 8. Rebuild ALL zip files with modified document.xml
+    // 8. Collect images from RTE editors and embed in zip
+    const imgFiles = [];
+    let imgCounter = 100;
+
+    async function _embedImages(editorId, tokenName) {
+      const images = RTE.getImages(editorId);
+      if (!images.length) return;
+
+      let imgParasXml = '';
+      for (const img of images) {
+        const rId  = `rId${imgCounter++}`;
+        const ext  = _mimeExt(img.src);
+        const bytes = _dataUrlToBytes(img.src);
+        const wPx  = img.w || 300;
+        const hPx  = img.h || 200;
+        const ar   = hPx / Math.max(wPx, 1);
+        const wIn  = Math.min(wPx / 96, 6.0);
+        const wEmu = Math.round(wIn * 914400);
+        const hEmu = Math.round(wIn * ar * 914400);
+        imgFiles.push({ rId, ext, bytes, filename: `word/media/rte${rId}.${ext}` });
+        imgParasXml += _makeImageXml(wEmu, hEmu, rId);
+      }
+
+      // Append image paragraphs after the token's paragraph
+      const tokenPara = `{{${tokenName}}}`;
+      const idx = xml.indexOf(tokenPara);
+      if (idx !== -1) {
+        const paraEnd = xml.indexOf('</w:p>', idx) + 6;
+        xml = xml.slice(0, paraEnd) + imgParasXml + xml.slice(paraEnd);
+      }
+    }
+
+    await _embedImages('rte-summary',  'Summary');
+    await _embedImages('rte-followup', 'FollowUp');
+
+    // 9. Rebuild ALL zip files with modified document.xml + image files
     const outFiles = {};
     for (const [name, entry] of Object.entries(zipFiles)) {
       if (name === 'word/document.xml') {
-        outFiles[name] = xml;  // use our modified version
+        outFiles[name] = xml;
+      } else if (name === 'word/_rels/document.xml.rels') {
+        // Add image relationships
+        let rels = await ZipLib.getFileText(zipFiles, name);
+        for (const img of imgFiles) {
+          const rel = `<Relationship Id="${img.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/rte${img.rId}.${img.ext}"/>`;
+          rels = rels.replace('</Relationships>', rel + '</Relationships>');
+        }
+        outFiles[name] = rels;
+      } else if (name === '[Content_Types].xml' && imgFiles.length) {
+        // Add content types for image extensions
+        let ct = await ZipLib.getFileText(zipFiles, name);
+        const exts = [...new Set(imgFiles.map(f => f.ext))];
+        for (const ext of exts) {
+          const mime = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+          if (!ct.includes(`Extension="${ext}"`)) {
+            ct = ct.replace('</Types>', `<Default Extension="${ext}" ContentType="${mime}"/></Types>`);
+          }
+        }
+        outFiles[name] = ct;
       } else {
-        // Re-use original compressed data as-is by decompressing then rewriting
         outFiles[name] = await ZipLib.getFileAsBytes(zipFiles, name);
       }
     }
 
-    // 9. Write new ZIP
+    // Add image binary files
+    for (const img of imgFiles) {
+      outFiles[img.filename] = img.bytes;
+    }
+
+    // 10. Write new ZIP
     const bytes = await ZipLib.writeZip(outFiles);
 
     // 10. Download
