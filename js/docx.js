@@ -124,6 +124,37 @@ const DOCX = (() => {
     return xml.slice(0, tmpl.start) + newRows + xml.slice(tmpl.end);
   }
 
+  // ── Strip <w:sdt> wrappers, preserving inner <w:sdtContent> ─────────────────
+  // Handles nested sdts correctly by tracking depth, not using regex.
+  function _stripSdtWrappers(xml) {
+    const out = [];
+    let i = 0;
+    while (i < xml.length) {
+      if (xml.slice(i, i+7) === '<w:sdt>') {
+        // Find matching </w:sdt> with depth tracking
+        let depth = 1, j = i + 7;
+        while (j < xml.length && depth > 0) {
+          if      (xml.slice(j, j+7) === '<w:sdt>')  { depth++; j += 7; }
+          else if (xml.slice(j, j+8) === '</w:sdt>') { depth--; if (depth > 0) j += 8; }
+          else    j++;
+        }
+        // Extract content between first <w:sdtContent> and last </w:sdtContent>
+        const block    = xml.slice(i, j + 8);
+        const scStart  = block.indexOf('<w:sdtContent>');
+        const scEnd    = block.lastIndexOf('</w:sdtContent>');
+        if (scStart !== -1 && scEnd !== -1) {
+          out.push(block.slice(scStart + 14, scEnd));
+        } else {
+          out.push(block);
+        }
+        i = j + 8;
+      } else {
+        out.push(xml[i++]);
+      }
+    }
+    return out.join('');
+  }
+
   // ── Main ──────────────────────────────────────────────────────────────────
   async function download(formData, filename) {
 
@@ -156,7 +187,12 @@ const DOCX = (() => {
       '{{systemserial}}':       formData.systemSerial   || '',
     };
 
-    // 5. Replace flat tokens
+    // 5a. Strip Word content control wrappers (<w:sdt>) — these cause the
+    //     bracket/cursor indicators visible in Word. We keep the inner
+    //     sdtContent and discard the wrapper, handling nested sdts correctly.
+    xml = _stripSdtWrappers(xml);
+
+    // 5b. Replace flat tokens
     xml = _replaceAllTokens(xml, tokenMap);
 
     // 6. Expand labor rows
