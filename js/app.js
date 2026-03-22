@@ -189,6 +189,19 @@ const App = {
 
   showHub() { App._show('hub'); },
 
+  // ── Fix events list height so it scrolls within the panel ────────────────
+  _fixCalHeight() {
+    const panel    = document.querySelector('.cal-panel');
+    const section  = document.querySelector('.cal-section');
+    const btn      = document.querySelector('.use-btn');
+    const list     = document.getElementById('events-list');
+    if (!panel || !section || !btn || !list) return;
+    const available = panel.clientHeight - section.offsetHeight - btn.offsetHeight - 16;
+    list.style.height   = Math.max(100, available) + 'px';
+    list.style.overflowY = 'auto';
+    list.style.flex      = 'none';
+  },
+
   async showWO() {
     App._show('wo');
 
@@ -210,6 +223,10 @@ const App = {
       Cal.init().then(() => Cal.load()),
       Parts.loadCatalog(),
     ]);
+
+    // Pin the events list height so it scrolls and the button stays visible
+    App._fixCalHeight();
+    window.addEventListener('resize', App._fixCalHeight);
   },
 
   // ── Tab navigation (within Work Order screen) ─────────────────────────────
