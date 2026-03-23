@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RTG Expense Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/css/app.css">
+</head>
+<body>
+
+<div id="screen-login" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-mark">⚙</div>
+      <div>
+        <div class="login-logo-title">RTG Field Tools</div>
+        <div class="login-logo-sub">Rosemount Tank Gauging</div>
+      </div>
+    </div>
+    <div class="login-heading">Sign in to continue</div>
+    <div class="login-sub">
+      Use your Emerson Microsoft account to access your Outlook calendar
+      and generate work orders.
+    </div>
+    <button class="btn-ms-login" onclick="App.login()">
+      <!-- Microsoft logo SVG -->
+      <svg width="20" height="20" viewBox="0 0 21 21" fill="none">
+        <rect x="1"  y="1"  width="9" height="9" fill="#f25022"/>
+        <rect x="11" y="1"  width="9" height="9" fill="#7fba00"/>
+        <rect x="1"  y="11" width="9" height="9" fill="#00a4ef"/>
+        <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+      </svg>
+      Sign in with Microsoft
+    </button>
+    <div class="login-note">
+      Your credentials are handled entirely by Microsoft.<br>
+      This app never sees your password.
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     HUB SCREEN
+     To add a new tool: copy a .tool-card block below and add a route in app.js
+════════════════════════════════════════════════════════════════════════════ -->
+
+<div id="screen-expense" class="screen">
+  <header class="app-header">
+    <div class="hdr-stripe" style="background:var(--teal,#00c49a)"></div>
+    <div class="hdr-inner">
+      <div class="hdr-left">
+        <button class="hdr-btn" onclick="window.location='../'">← Hub</button>
+        <div class="hdr-title">Expense <span style="color:#00c49a">Report</span></div>
+      </div>
+      <div class="hdr-right">
+        <div class="brand-badge">EMERSON<br>ROSEMOUNT</div>
+      </div>
+    </div>
+  </header>
+  <div id="expense-container" style="flex:1;overflow-y:auto;"></div>
+</div>
+
+<!-- Toast notification -->
+
+<div id="toast" class="toast"></div>
+
+<!-- Shared utilities -->
+<script src="../shared/js/ziplib.js"></script>
+<script src="../shared/js/config.js"></script>
+<script src="../shared/js/auth.js"></script>
+<script src="../shared/js/graph.js"></script>
+
+<!-- Expense specific -->
+<script src="js/expense.js"></script>
+
+<script>
+const Settings = {
+  get: (k,d='') => { try{const v=localStorage.getItem('rtg_'+k);return v!==null?JSON.parse(v):d;}catch{return d;} },
+  set: (k,v)    => { try{localStorage.setItem('rtg_'+k,JSON.stringify(v));}catch{} },
+};
+
+const App = {
+  async init() {
+    if (location.hash.includes('code=')) {
+      const ok = await Auth.handleRedirect();
+      if (ok) { await App._enter(); return; }
+    }
+    if (Auth.restoreSession()) { await App._enter(); return; }
+    App._show('login');
+  },
+  async login()  { await Auth.login(); },
+  async logout() { Auth.logout(); App._show('login'); },
+  async _enter() {
+    App._show('expense');
+    Expense.init();
+  },
+  _show(s) {
+    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+    document.getElementById('screen-'+s)?.classList.add('active');
+  },
+  _toastTimer: null,
+  toast(msg, type='') {
+    const el = document.getElementById('toast');
+    el.textContent=msg; el.className='toast'+(type?' '+type:''); el.style.display='block';
+    clearTimeout(App._toastTimer);
+    App._toastTimer = setTimeout(()=>{el.style.display='none';}, 5000);
+  },
+};
+
+App.init();
+</script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RTG Field Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/css/app.css">
+</head>
+<body>
+
+<div id="screen-login" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-mark">⚙</div>
+      <div>
+        <div class="login-logo-title">RTG Field Tools</div>
+        <div class="login-logo-sub">Rosemount Tank Gauging</div>
+      </div>
+    </div>
+    <div class="login-heading">Sign in to continue</div>
+    <div class="login-sub">
+      Use your Emerson Microsoft account to access your Outlook calendar
+      and generate work orders.
+    </div>
+    <button class="btn-ms-login" onclick="App.login()">
+      <!-- Microsoft logo SVG -->
+      <svg width="20" height="20" viewBox="0 0 21 21" fill="none">
+        <rect x="1"  y="1"  width="9" height="9" fill="#f25022"/>
+        <rect x="11" y="1"  width="9" height="9" fill="#7fba00"/>
+        <rect x="1"  y="11" width="9" height="9" fill="#00a4ef"/>
+        <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+      </svg>
+      Sign in with Microsoft
+    </button>
+    <div class="login-note">
+      Your credentials are handled entirely by Microsoft.<br>
+      This app never sees your password.
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     HUB SCREEN
+     To add a new tool: copy a .tool-card block below and add a route in app.js
+════════════════════════════════════════════════════════════════════════════ -->
+
+<div id="screen-hub" class="screen">
+  <header class="app-header">
+    <div class="hdr-stripe"></div>
+    <div class="hdr-inner">
+      <div class="hdr-left">
+        <div class="hdr-title">RTG <span>Field Tools</span></div>
+        <div class="hdr-user">
+          <div class="hdr-user-dot"></div>
+          <span id="hdr-username">Loading…</span>
+        </div>
+      </div>
+      <div class="hdr-right">
+        <button class="hdr-btn" onclick="App.openSettings()">⚙ Settings</button>
+        <button class="hdr-btn" onclick="App.logout()">Sign out</button>
+        <div class="brand-badge">EMERSON<br>ROSEMOUNT</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="hub-main">
+    <div class="hub-hero">
+      <h1>Service <em>Operations</em><br>Hub</h1>
+      <p>All field documentation tools in one place. Select a tool to get started.</p>
+    </div>
+
+    <div class="section-rule">Available Tools</div>
+
+    <div class="tools-grid">
+
+      <!-- Work Order Generator -->
+      <div class="tool-card" onclick="window.location='work-order/'">
+        <div class="card-bar"></div>
+        <div class="card-body">
+          <div class="card-badge">Active</div>
+          <span class="card-icon">📋</span>
+          <div class="card-title">Work Order Generator</div>
+          <div class="card-desc">
+            Select a calendar event and auto-fill a complete service work order.
+            Rich text summaries with image support, auto labor rows, exports to .docx.
+          </div>
+          <div class="card-tags">
+            <span class="card-tag">Outlook Calendar</span>
+            <span class="card-tag">Rich Text</span>
+            <span class="card-tag">.docx Export</span>
+          </div>
+          <div class="card-cta">Open Tool →</div>
+        </div>
+      </div>
+
+      <!-- RTG Calendar Invite (coming soon) -->
+      <div class="tool-card disabled">
+        <div class="card-bar orange"></div>
+        <div class="card-body">
+          <span class="card-icon">📅</span>
+          <div class="card-title">RTG Calendar Invite</div>
+          <div class="card-desc">
+            Import a customer intake PDF and generate a properly formatted
+            Outlook calendar invite matching RTG standards.
+          </div>
+          <div class="card-tags">
+            <span class="card-tag">PDF Import</span>
+            <span class="card-tag">Outlook Invite</span>
+          </div>
+          <div class="card-cta" style="color:var(--text-dim)">Coming Soon →</div>
+        </div>
+      </div>
+
+      <!-- Expense Report (coming soon) -->
+      <div class="tool-card" onclick="window.location='expense/'">
+        <div class="card-bar teal"></div>
+        <div class="card-body">
+          <div class="card-badge">Active</div>
+          <span class="card-icon">💰</span>
+          <div class="card-title">Expense Report</div>
+          <div class="card-desc">
+            Upload your expense .xlsx and receipt PDFs. AI reads each receipt,
+            cross-references your calendar, fills the correct cells, and merges everything.
+          </div>
+          <div class="card-tags">
+            <span class="card-tag">AI Receipt Reading</span>
+            <span class="card-tag">Calendar Lookup</span>
+            <span class="card-tag">.xlsx Fill</span>
+          </div>
+          <div class="card-cta">Open Tool →</div>
+        </div>
+      </div>
+
+      <!-- Add more tool cards here -->
+
+    </div><!-- tools-grid -->
+  </div><!-- hub-main -->
+</div><!-- screen-hub -->
+
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <div class="modal-title">⚙ Settings</div>
+    <div class="modal-sub">Configure app behavior and feature flags.</div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Shared Calendar</div>
+        <div class="setting-desc">
+          Show a shared service mailbox calendar alongside your personal calendar.
+          Requires <code>Calendars.Read.Shared</code> permission from IT.
+        </div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="tog-shared"
+               onchange="App.saveSetting('sharedCal', this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Default Technician Name</div>
+        <div class="setting-desc">Pre-fills the Service Technician field on every new work order.</div>
+      </div>
+    </div>
+    <div style="margin-bottom:16px;">
+      <input type="text" class="f-input" id="set-tech" style="width:100%"
+             placeholder="e.g. Seguin"
+             oninput="App.saveSetting('defaultTech', this.value)">
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Shared Mailbox Address</div>
+        <div class="setting-desc">Email address of the shared service calendar (used when Shared Calendar is on).</div>
+      </div>
+    </div>
+    <div style="margin-bottom:8px;">
+      <input type="email" class="f-input" id="set-shared-email" style="width:100%"
+             placeholder="service-team@emerson.com"
+             oninput="App.saveSetting('sharedEmail', this.value)">
+    </div>
+
+    <button class="modal-close" onclick="App.closeSettings()">Close</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="shared/js/config.js"></script>
+<script src="shared/js/auth.js"></script>
+<script src="shared/js/graph.js"></script>
+<script>
+// Hub-only Settings helper
+const Settings = {
+  get: (k,d='') => { try{const v=localStorage.getItem('rtg_'+k);return v!==null?JSON.parse(v):d;}catch{return d;} },
+  set: (k,v)    => { try{localStorage.setItem('rtg_'+k,JSON.stringify(v));}catch{} },
+};
+
+const App = {
+  async init() {
+    if (location.hash.includes('code=')) {
+      const ok = await Auth.handleRedirect();
+      if (ok) { await App._enter(); return; }
+    }
+    if (Auth.restoreSession()) { await App._enter(); return; }
+    App._show('login');
+  },
+  async login()  { await Auth.login(); },
+  async logout() { Auth.logout(); App._show('login'); },
+  async _enter() {
+    try {
+      const user = await (await fetch('https://graph.microsoft.com/v1.0/me',
+        {headers:{Authorization:'Bearer '+Auth.getToken()}})).json();
+      document.getElementById('hdr-username').textContent = user.displayName || user.mail || 'Signed in';
+    } catch(e) {}
+    document.getElementById('tog-shared').checked     = Settings.get('sharedCal', false);
+    document.getElementById('set-tech').value         = Settings.get('defaultTech', '');
+    document.getElementById('set-shared-email').value = Settings.get('sharedEmail', '');
+    App._show('hub');
+  },
+  _show(s) {
+    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+    document.getElementById('screen-'+s)?.classList.add('active');
+  },
+  openSettings()  { document.getElementById('settings-modal').classList.add('open'); },
+  closeSettings() { document.getElementById('settings-modal').classList.remove('open'); },
+  saveSetting(k,v){ Settings.set(k,v); },
+  _toastTimer: null,
+  toast(msg, type='') {
+    const el = document.getElementById('toast');
+    el.textContent=msg; el.className='toast'+(type?' '+type:''); el.style.display='block';
+    clearTimeout(App._toastTimer);
+    App._toastTimer = setTimeout(()=>{el.style.display='none';}, 5000);
+  },
+};
+
+document.getElementById('settings-modal').addEventListener('click', e => {
+  if (e.target===e.currentTarget) App.closeSettings();
+});
+
+App.init();
+</script>
+</body>
+</html>
