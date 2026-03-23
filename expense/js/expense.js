@@ -300,70 +300,53 @@ const Expense = (() => {
     _render();
   }
 
-  // ── AI receipt extraction ─────────────────────────────────────────────────
+  // ── Receipt extraction via PDF.js text parsing ───────────────────────────
+  // PDF.js is loaded on demand from CDN — no installs, no API key needed.
+  // For text-based PDFs (hotel folios, digital receipts) this works perfectly.
+  // For scanned image PDFs it falls back gracefully to manual entry.
+
+  function _loadPdfJs() {
+    return new Promise((resolve, reject) => {
+      if (typeof pdfjsLib !== 'undefined') { resolve(); return; }
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = () => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolve();
+      };
+      script.onerror = () => reject(new Error('Could not load PDF.js'));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function _extractText(arrayBuffer) {
+    await _loadPdfJs();
+    const pdf   = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let   text  = '';
+    // Extract text from all pages (usually 1-2 for receipts)
+    for (let p = 1; p <= Math.min(pdf.numPages, 3); p++) {
+      const page    = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      text += content.items.map(i => i.str).join(' ') + '\n';
+    }
+    return text.trim();
+  }
+
   async function _extractReceipt(receipt) {
     try {
-      // Convert PDF bytes to base64
-      const b64 = _bytesToB64(receipt.bytes);
-
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: [
-              {
-                type: 'document',
-                source: { type: 'base64', media_type: 'application/pdf', data: b64 }
-              },
-              {
-                type: 'text',
-                text: `Extract expense information from this receipt. Return ONLY a JSON object with these fields:
-{
-  "date": "YYYY-MM-DD",
-  "vendor": "business name and address",
-  "amount": 0.00,
-  "type": one of: breakfast|lunch|dinner|biz_meal|lodging|transport|parking|tolls|rental_car|other_1,
-  "meal_type": one of: breakfast|lunch|dinner (only if it's a meal),
-  "company": "",
-  "guests": "",
-  "purpose": "Future Business"
-}
-
-Rules:
-- amount should be the TOTAL including tip if shown
-- For type: use breakfast/lunch/dinner for solo meal travel receipts, biz_meal if it looks like a group/business meal
-- Guess meal type from time of day on receipt if shown (before 10am=breakfast, 10am-3pm=lunch, after 3pm=dinner)
-- Return ONLY valid JSON, no other text`
-              }
-            ]
-          }]
-        })
-      });
-
-      const data = await response.json();
-      const text = data.content?.[0]?.text || '';
-
-      // Parse JSON from response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const extracted = JSON.parse(jsonMatch[0]);
-        receipt.extracted  = extracted;
-        receipt.processing = false;
-
-        // Auto calendar lookup if biz_meal
-        if (extracted.type === 'biz_meal' && extracted.date) {
-          await _calLookup(_receipts.indexOf(receipt));
-        }
-      } else {
-        throw new Error('Could not parse AI response');
+      const text = await _extractText(receipt.bytes);
+      if (!text || text.length < 20) throw new Error('No text found — may be a scanned image');
+      const extracted = _parseReceiptText(text, receipt.name);
+      receipt.extracted  = extracted;
+      receipt.processing = false;
+      // Auto calendar lookup if biz_meal
+      if (extracted.type === 'biz_meal' && extracted.date) {
+        await _calLookup(_receipts.indexOf(receipt));
       }
     } catch (e) {
       receipt.processing = false;
-      receipt.error = `AI read failed: ${e.message}. Fill manually.`;
+      receipt.error = `Could not auto-read: ${e.message}. Fill manually.`;
       receipt.extracted = {
         date: '', vendor: receipt.name.replace('.pdf',''), amount: '',
         type: 'other_1', meal_type: 'lunch', company: '', guests: '', purpose: 'Future Business'
@@ -371,7 +354,99 @@ Rules:
     }
   }
 
-  function _bytesToB64(buffer) {
+  // ── Smart pattern matching on extracted PDF text ──────────────────────────
+  function _parseReceiptText(text, filename) {
+    const t = text;
+
+    // ── DATE ─────────────────────────────────────────────────────────────────
+    let date = '';
+    const datePatterns = [
+      /\b(20\d{2})[\-\/](\d{1,2})[\-\/](\d{1,2})\b/,          // YYYY-MM-DD or YYYY/MM/DD
+      /\b(\d{1,2})[\-\/](\d{1,2})[\-\/](20\d{2})\b/,          // MM-DD-YYYY
+      /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})[,\s]+(20\d{2})\b/i, // Mar 12, 2026
+      /\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(20\d{2})\b/i,    // 12 Mar 2026
+    ];
+    const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+    for (const rx of datePatterns) {
+      const m = rx.exec(t);
+      if (m) {
+        if (m[1] && m[1].length === 4) {
+          date = `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+        } else if (isNaN(m[1])) {
+          const mo = MONTHS[m[1].toLowerCase().slice(0,3)];
+          date = `${m[3]}-${String(mo).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;
+        } else if (isNaN(m[2])) {
+          const mo = MONTHS[m[2].toLowerCase().slice(0,3)];
+          date = `${m[3]}-${String(mo).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+        } else {
+          date = `${m[3]}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;
+        }
+        break;
+      }
+    }
+
+    // ── AMOUNT ───────────────────────────────────────────────────────────────
+    // Look for Total, Grand Total, Amount Due, Balance Due, Charge
+    let amount = '';
+    const amtPatterns = [
+      /(?:grand\s+total|total\s+due|amount\s+due|balance\s+due|total\s+charged|total\s+amount|total)[^\d]*(\d{1,5}\.\d{2})/i,
+      /(?:total)[^\d$]*(\$?\d{1,5}\.\d{2})/i,
+      /\$\s*(\d{1,5}\.\d{2})/,
+    ];
+    for (const rx of amtPatterns) {
+      const m = rx.exec(t);
+      if (m) { amount = parseFloat(m[1].replace('$','')); break; }
+    }
+    // If no labeled total, find the largest dollar amount
+    if (!amount) {
+      const allAmts = [...t.matchAll(/\$?\b(\d{1,4}\.\d{2})\b/g)]
+        .map(m => parseFloat(m[1])).filter(n => n > 0 && n < 10000);
+      if (allAmts.length) amount = Math.max(...allAmts);
+    }
+
+    // ── VENDOR / PLACE ───────────────────────────────────────────────────────
+    // Take the first meaningful line (usually the business name)
+    const lines = t.split(/\n|\r/).map(l => l.trim()).filter(l => l.length > 2);
+    const vendor = lines.slice(0,3).join(', ').slice(0, 100);
+
+    // ── TIME (for meal type guess) ───────────────────────────────────────────
+    let hour = -1;
+    const timeM = t.match(/\b(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)?/);
+    if (timeM) {
+      hour = parseInt(timeM[1]);
+      if (timeM[3]?.toLowerCase() === 'pm' && hour < 12) hour += 12;
+      if (timeM[3]?.toLowerCase() === 'am' && hour === 12) hour = 0;
+    }
+
+    // ── TYPE DETECTION ───────────────────────────────────────────────────────
+    const tl = t.toLowerCase();
+    let type = 'other_1';
+    let meal_type = 'lunch';
+
+    if      (/hotel|lodging|inn|suites?|marriott|hilton|hyatt|holiday inn|hampton|folio/i.test(t)) {
+      type = 'lodging';
+    } else if (/enterprise|hertz|avis|budget\s+car|national\s+car|alamo|rental\s+car|car\s+rental/i.test(t)) {
+      type = 'rental_car';
+    } else if (/airline|delta|united|american\s+air|southwest|flight|airfare|boarding/i.test(t)) {
+      type = 'transport';
+    } else if (/parking|garage|park\s+&\s+fly|lot\s+[a-z]/i.test(t)) {
+      type = 'parking';
+    } else if (/toll|turnpike|e-zpass|sunpass/i.test(t)) {
+      type = 'tolls';
+    } else if (/restaurant|cafe|diner|grill|kitchen|food|bar &|& grill|steakhouse|pizza|sushi|taco|burger|bbq|seafood|buffet|bistro/i.test(t)) {
+      // It's a restaurant — determine solo vs business and meal time
+      const personCount = (t.match(/guest|party\s+of|table\s+of|covers?:/i) || []).length;
+      type = personCount ? 'biz_meal' : 'lunch'; // default solo meal = lunch category
+
+      if      (hour >= 0  && hour < 10) { type = 'breakfast'; meal_type = 'breakfast'; }
+      else if (hour >= 10 && hour < 15) { type = 'lunch';     meal_type = 'lunch'; }
+      else if (hour >= 15)              { type = 'dinner';    meal_type = 'dinner'; }
+    }
+
+    return { date, vendor, amount, type, meal_type, company: '', guests: '', purpose: 'Future Business' };
+  }
+
+    function _bytesToB64(buffer) {
     const bytes = new Uint8Array(buffer);
     let binary  = '';
     for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
